@@ -215,6 +215,9 @@ allprojects  {
                     "EqualsGetClass",
                     "FutureReturnValueIgnored"
             )
+            if (name.toLowerCase().contains("test")) {
+                disable("StringSplitter")
+            }
         }
     }
 
@@ -674,6 +677,9 @@ configure(project.fineractJavaProjects) {
                     // "UnnecessaryDefaultInEnumSwitch",
                     // "FieldCanBeFinal"
                     )
+            if (name.toLowerCase().contains("test")) {
+                disable("StringSplitter")
+            }
         }
     }
 
