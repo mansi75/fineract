@@ -414,6 +414,30 @@ spotbugsMain.dependsOn resolve
 compileTestJava.dependsOn ':fineract-client:processResources', ':fineract-avro-schemas:processResources', resolve
 resolveMainClassName.dependsOn resolve
 
+// The boundary checks import the whole org.apache.fineract class graph through ArchUnit, which needs more heap
+// than the rest of the suite. Kept in a separate task so the default test JVM is left untouched.
+tasks.register('boundaryTest', Test) {
+    description = 'Verifies that feature modules do not reach across module boundaries.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching '*CrossFeatureBoundaryTest'
+    }
+    maxHeapSize = '2g'
+    jvmArgs += ['-XX:MaxMetaspaceSize=1g']
+    dependsOn resolve
+}
+
+test {
+    filter {
+        excludeTestsMatching '*CrossFeatureBoundaryTest'
+    }
+}
+
+check.dependsOn boundaryTest
+
 javadoc {
     dependsOn resolve
 }

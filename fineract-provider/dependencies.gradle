@@ -25,6 +25,11 @@ dependencies {
     }
 
     implementation(project(path: ':fineract-core'))
+    // @ApplicationModule is only read by ArchUnit bytecode analysis in CalendarCrossFeatureBoundaryTest,
+    // so it stays off the runtime classpath.
+    compileOnly 'org.springframework.modulith:spring-modulith-api'
+    testImplementation 'org.springframework.modulith:spring-modulith-core'
+    testImplementation 'org.osgi:org.osgi.core:6.0.0'
     implementation(project(path: ':fineract-cob'))
     implementation(project(path: ':fineract-command'))
     implementation(project(path: ':fineract-command-audit'))

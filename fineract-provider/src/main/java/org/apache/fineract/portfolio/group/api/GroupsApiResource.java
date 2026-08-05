@@ -290,8 +290,8 @@ public class GroupsApiResource {
                             .generateNextTenRecurringDates(collectionMeetingCalendar);
                     final MeetingData lastMeeting = meetingReadPlatformService
                             .retrieveLastMeeting(collectionMeetingCalendar.getCalendarInstanceId());
-                    final LocalDate recentEligibleMeetingDate = calendarReadPlatformService
-                            .generateNextEligibleMeetingDateForCollection(collectionMeetingCalendar, lastMeeting);
+                    final LocalDate recentEligibleMeetingDate = calendarReadPlatformService.generateNextEligibleMeetingDateForCollection(
+                            collectionMeetingCalendar, lastMeeting == null ? null : lastMeeting.getMeetingDate());
                     collectionMeetingCalendar = CalendarData.withRecurringDates(collectionMeetingCalendar, recurringDates,
                             nextTenRecurringDates, recentEligibleMeetingDate);
                 }

@@ -35,7 +35,6 @@ import org.apache.fineract.portfolio.calendar.data.CalendarData;
 import org.apache.fineract.portfolio.calendar.domain.CalendarEntityType;
 import org.apache.fineract.portfolio.calendar.domain.CalendarType;
 import org.apache.fineract.portfolio.calendar.exception.CalendarNotFoundException;
-import org.apache.fineract.portfolio.meeting.data.MeetingData;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -309,9 +308,8 @@ public class CalendarReadPlatformServiceImpl implements CalendarReadPlatformServ
     }
 
     @Override
-    public LocalDate generateNextEligibleMeetingDateForCollection(final CalendarData calendarData, final MeetingData lastMeetingData) {
+    public LocalDate generateNextEligibleMeetingDateForCollection(final CalendarData calendarData, final LocalDate lastMeetingDate) {
 
-        final LocalDate lastMeetingDate = (lastMeetingData == null) ? null : lastMeetingData.getMeetingDate();
         // get applicable calendar based on meeting date
         CalendarData applicableCalendarData = calendarData;
         LocalDate nextEligibleMeetingDate = null;

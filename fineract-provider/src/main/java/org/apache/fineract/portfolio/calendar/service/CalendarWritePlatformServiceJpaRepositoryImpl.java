@@ -21,8 +21,6 @@ package org.apache.fineract.portfolio.calendar.service;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +34,11 @@ import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.portfolio.calendar.CalendarConstants.CalendarSupportedParameters;
+import org.apache.fineract.portfolio.calendar.contract.CalendarClientReadService;
+import org.apache.fineract.portfolio.calendar.contract.CalendarGroupData;
+import org.apache.fineract.portfolio.calendar.contract.CalendarGroupReadService;
+import org.apache.fineract.portfolio.calendar.contract.CalendarLoanReadService;
+import org.apache.fineract.portfolio.calendar.contract.CalendarLoanWriteService;
 import org.apache.fineract.portfolio.calendar.domain.Calendar;
 import org.apache.fineract.portfolio.calendar.domain.CalendarEntityType;
 import org.apache.fineract.portfolio.calendar.domain.CalendarHistory;
@@ -46,14 +49,6 @@ import org.apache.fineract.portfolio.calendar.domain.CalendarRepository;
 import org.apache.fineract.portfolio.calendar.domain.CalendarType;
 import org.apache.fineract.portfolio.calendar.exception.CalendarNotFoundException;
 import org.apache.fineract.portfolio.calendar.serialization.CalendarCommandFromApiJsonDeserializer;
-import org.apache.fineract.portfolio.client.domain.Client;
-import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
-import org.apache.fineract.portfolio.group.domain.Group;
-import org.apache.fineract.portfolio.group.domain.GroupRepositoryWrapper;
-import org.apache.fineract.portfolio.loanaccount.domain.Loan;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanRepositoryWrapper;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanStatus;
-import org.apache.fineract.portfolio.loanaccount.service.LoanWritePlatformService;
 import org.springframework.util.CollectionUtils;
 
 @RequiredArgsConstructor
@@ -63,11 +58,11 @@ public class CalendarWritePlatformServiceJpaRepositoryImpl implements CalendarWr
     private final CalendarHistoryRepository calendarHistoryRepository;
     private final CalendarCommandFromApiJsonDeserializer fromApiJsonDeserializer;
     private final CalendarInstanceRepository calendarInstanceRepository;
-    private final LoanWritePlatformService loanWritePlatformService;
+    private final CalendarLoanWriteService calendarLoanWriteService;
     private final ConfigurationDomainService configurationDomainService;
-    private final GroupRepositoryWrapper groupRepository;
-    private final LoanRepositoryWrapper loanRepositoryWrapper;
-    private final ClientRepositoryWrapper clientRepository;
+    private final CalendarGroupReadService calendarGroupReadService;
+    private final CalendarLoanReadService calendarLoanReadService;
+    private final CalendarClientReadService calendarClientReadService;
 
     @Override
     public CommandProcessingResult createCalendar(final JsonCommand command) {
@@ -76,20 +71,18 @@ public class CalendarWritePlatformServiceJpaRepositoryImpl implements CalendarWr
         Long entityId = null;
         CalendarEntityType entityType = CalendarEntityType.INVALID;
         LocalDate entityActivationDate = null;
-        Group centerOrGroup = null;
+        CalendarGroupData centerOrGroup = null;
         if (command.getGroupId() != null) {
-            centerOrGroup = this.groupRepository.findOneWithNotFoundDetection(command.getGroupId());
-            entityActivationDate = centerOrGroup.getActivationDate();
-            entityType = centerOrGroup.isCenter() ? CalendarEntityType.CENTERS : CalendarEntityType.GROUPS;
+            centerOrGroup = this.calendarGroupReadService.retrieveGroupWithNotFoundDetection(command.getGroupId());
+            entityActivationDate = centerOrGroup.activationDate();
+            entityType = centerOrGroup.center() ? CalendarEntityType.CENTERS : CalendarEntityType.GROUPS;
             entityId = command.getGroupId();
         } else if (command.getLoanId() != null) {
-            final Loan loan = this.loanRepositoryWrapper.findOneWithNotFoundDetection(command.getLoanId(), true);
-            entityActivationDate = (loan.getApprovedOnDate() == null) ? loan.getSubmittedOnDate() : loan.getApprovedOnDate();
+            entityActivationDate = this.calendarLoanReadService.retrieveLoanActivationDate(command.getLoanId());
             entityType = CalendarEntityType.LOANS;
             entityId = command.getLoanId();
         } else if (command.getClientId() != null) {
-            final Client client = this.clientRepository.findOneWithNotFoundDetection(command.getClientId());
-            entityActivationDate = client.getActivationDate();
+            entityActivationDate = this.calendarClientReadService.retrieveClientActivationDate(command.getClientId());
             entityType = CalendarEntityType.CLIENTS;
             entityId = command.getClientId();
         }
@@ -112,12 +105,11 @@ public class CalendarWritePlatformServiceJpaRepositoryImpl implements CalendarWr
         }
 
         if (centerOrGroup != null) {
-            Long centerOrGroupId = centerOrGroup.getId();
+            Long centerOrGroupId = centerOrGroup.id();
             Integer centerOrGroupEntityTypeId = entityType.getValue();
 
-            final Group parent = centerOrGroup.getParent();
-            if (parent != null) {
-                centerOrGroupId = parent.getId();
+            if (centerOrGroup.hasParent()) {
+                centerOrGroupId = centerOrGroup.parentId();
                 centerOrGroupEntityTypeId = CalendarEntityType.CENTERS.getValue();
             }
 
@@ -153,18 +145,15 @@ public class CalendarWritePlatformServiceJpaRepositoryImpl implements CalendarWr
 
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
         final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("calendar");
-        Group centerOrGroup = null;
-
         if (groupId != null) {
-            centerOrGroup = this.groupRepository.findOneWithNotFoundDetection(groupId);
-            final Group parent = centerOrGroup.getParent();
+            final CalendarGroupData centerOrGroup = this.calendarGroupReadService.retrieveGroupWithNotFoundDetection(groupId);
             /* Check if it is a Group and belongs to a center */
-            if (centerOrGroup.isGroup() && parent != null) {
+            if (centerOrGroup.group() && centerOrGroup.hasParent()) {
 
                 Integer centerEntityTypeId = CalendarEntityType.CENTERS.getValue();
                 /* Check if calendar is created at center */
                 final CalendarInstance collectionCalendarInstance = this.calendarInstanceRepository
-                        .findByEntityIdAndEntityTypeIdAndCalendarTypeId(parent.getId(), centerEntityTypeId,
+                        .findByEntityIdAndEntityTypeIdAndCalendarTypeId(centerOrGroup.parentId(), centerEntityTypeId,
                                 CalendarType.COLLECTION.getValue());
                 /*
                  * If calendar is created by parent group, then it cannot be edited by the child group
@@ -193,22 +182,12 @@ public class CalendarWritePlatformServiceJpaRepositoryImpl implements CalendarWr
          */
         this.fromApiJsonDeserializer.validateForUpdate(command.json());
 
-        Boolean areActiveEntitiesSynced = false;
         final Long calendarId = command.entityId();
-
-        final Collection<LoanStatus> loanStatuses = new ArrayList<>(
-                Arrays.asList(LoanStatus.SUBMITTED_AND_PENDING_APPROVAL, LoanStatus.APPROVED, LoanStatus.ACTIVE));
-
-        final Integer numberOfActiveLoansSyncedWithThisCalendar = this.calendarInstanceRepository.countOfLoansSyncedWithCalendar(calendarId,
-                loanStatuses);
 
         /*
          * areActiveEntitiesSynced is set to true, if there are any active loans synced to this calendar.
          */
-
-        if (numberOfActiveLoansSyncedWithThisCalendar > 0) {
-            areActiveEntitiesSynced = true;
-        }
+        final Boolean areActiveEntitiesSynced = this.calendarLoanReadService.hasActiveLoansSyncedWithCalendar(calendarId);
 
         final Calendar calendarForUpdate = this.calendarRepository.findById(calendarId)
                 .orElseThrow(() -> new CalendarNotFoundException(calendarId));
@@ -274,12 +253,12 @@ public class CalendarWritePlatformServiceJpaRepositoryImpl implements CalendarWr
             if (this.configurationDomainService.isRescheduleFutureRepaymentsEnabled() && calendarForUpdate.isRepeating()) {
                 // fetch all loan calendar instances associated with modifying
                 // calendar.
-                final Collection<CalendarInstance> loanCalendarInstances = this.calendarInstanceRepository
+                final List<CalendarInstance> loanCalendarInstances = this.calendarInstanceRepository
                         .findByCalendarIdAndEntityTypeId(calendarId, CalendarEntityType.LOANS.getValue());
 
                 if (!CollectionUtils.isEmpty(loanCalendarInstances)) {
                     // update all loans associated with modifying calendar
-                    this.loanWritePlatformService.applyMeetingDateChanges(calendarForUpdate, loanCalendarInstances,
+                    this.calendarLoanWriteService.applyMeetingDateChanges(calendarForUpdate, loanCalendarInstances,
                             reschedulebasedOnMeetingDates, presentMeetingDate, newMeetingDate);
 
                 }

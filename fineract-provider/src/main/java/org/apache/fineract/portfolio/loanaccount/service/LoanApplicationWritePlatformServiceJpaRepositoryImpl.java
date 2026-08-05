@@ -370,7 +370,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             calendar = this.calendarRepository.findById(calendarId).orElseThrow(() -> new CalendarNotFoundException(calendarId));
         }
 
-        final List<CalendarInstance> ciList = (List<CalendarInstance>) this.calendarInstanceRepository.findByEntityIdAndEntityTypeId(loanId,
+        final List<CalendarInstance> ciList = this.calendarInstanceRepository.findByEntityIdAndEntityTypeId(loanId,
                 CalendarEntityType.LOANS.getValue());
         if (calendar != null) {
             // For loans, allow to attach only one calendar instance per

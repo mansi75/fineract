@@ -18,13 +18,7 @@
  */
 package org.apache.fineract.portfolio.calendar.domain;
 
-import java.util.Collection;
 import java.util.List;
-import org.apache.fineract.portfolio.client.domain.Client;
-import org.apache.fineract.portfolio.group.domain.Group;
-import org.apache.fineract.portfolio.loanaccount.domain.Loan;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanStatus;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -42,11 +36,11 @@ public interface CalendarInstanceRepository extends JpaRepository<CalendarInstan
     CalendarInstance findByCalendarIdAndEntityIdAndEntityTypeId(Long calendarId, Long entityId, Integer entityTypeId);
 
     @Cacheable(key = "T(org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil).getTenant().getTenantIdentifier().concat('entityId_' + #entityId + '_entityTypeId_' + #entityTypeId)")
-    Collection<CalendarInstance> findByEntityIdAndEntityTypeId(Long entityId, Integer entityTypeId);
+    List<CalendarInstance> findByEntityIdAndEntityTypeId(Long entityId, Integer entityTypeId);
 
     /**
      * @param entityId
-     *            : Id of {@link Client}, {@link Group}, {@link Loan} or {@link SavingsAccount}.
+     *            : Id of the client, group, loan or savings account the calendar is attached to.
      * @param entityTypeId:
      *            {@link CalendarEntityType}
      * @param calendarTypeId:
@@ -61,21 +55,7 @@ public interface CalendarInstanceRepository extends JpaRepository<CalendarInstan
     CalendarInstance findCalendarInstanceByEntityId(@Param("entityId") Long entityId, @Param("entityTypeId") Integer entityTypeId);
 
     @Cacheable(key = "T(org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil).getTenant().getTenantIdentifier().concat('calendarId_' + #calendarId + '_entityTypeId_' + #entityTypeId)")
-    Collection<CalendarInstance> findByCalendarIdAndEntityTypeId(Long calendarId, Integer entityTypeId);
-
-    /** Should use in clause, can I do it without creating a new class? **/
-    @Cacheable(key = "T(org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil).getTenant().getTenantIdentifier().concat('groupId_' + #groupId + '_clientId_' + #clientId + '_statuses_' + T(org.springframework.util.StringUtils).collectionToCommaDelimitedString(#loanStatuses))")
-    @Query("select ci from CalendarInstance ci where ci.entityId in (select loan.id from Loan loan where loan.client.id = :clientId and loan.group.id = :groupId and loan.loanStatus in :loanStatuses) and ci.entityTypeId = 3")
-    List<CalendarInstance> findCalendarInstancesForLoansByGroupIdAndClientIdAndStatuses(@Param("groupId") Long groupId,
-            @Param("clientId") Long clientId, @Param("loanStatuses") Collection<LoanStatus> loanStatuses);
-
-    /**
-     * EntityType = 3 is for loan
-     */
-    @Cacheable(key = "T(org.apache.fineract.infrastructure.core.service.ThreadLocalContextUtil).getTenant().getTenantIdentifier().concat('countLoans_calendarId_' + #calendarId + '_statuses_' + T(org.springframework.util.StringUtils).collectionToCommaDelimitedString(#loanStatuses))")
-    @Query("SELECT COUNT(ci.id) FROM CalendarInstance ci, Loan loan WHERE loan.id = ci.entityId AND ci.entityTypeId = 3 AND ci.calendar.id = :calendarId AND loan.loanStatus IN :loanStatuses ")
-    Integer countOfLoansSyncedWithCalendar(@Param("calendarId") Long calendarId,
-            @Param("loanStatuses") Collection<LoanStatus> loanStatuses);
+    List<CalendarInstance> findByCalendarIdAndEntityTypeId(Long calendarId, Integer entityTypeId);
 
     // Override JpaRepository methods to add cache eviction
     @Override
