@@ -22,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.fineract.portfolio.account.domain.AccountTransferRepository;
 import org.apache.fineract.portfolio.account.domain.AccountTransferTransaction;
 import org.apache.fineract.portfolio.interestpauses.service.LoanAccountTransfersService;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,10 +33,10 @@ public class LoanAccountTransfersServiceImpl implements LoanAccountTransfersServ
 
     @Override
     @Transactional
-    public void updateLoanTransaction(final Long loanTransactionId, final LoanTransaction newLoanTransaction) {
+    public void updateLoanTransaction(final Long loanTransactionId, final Long newLoanTransactionId) {
         final AccountTransferTransaction transferTransaction = this.accountTransferRepository.findByToLoanTransactionId(loanTransactionId);
         if (transferTransaction != null) {
-            transferTransaction.updateToLoanTransaction(newLoanTransaction);
+            transferTransaction.updateToLoanTransaction(newLoanTransactionId);
             this.accountTransferRepository.save(transferTransaction);
         }
     }

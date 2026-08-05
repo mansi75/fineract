@@ -16,12 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.portfolio.interestpauses.service;
+package org.apache.fineract.portfolio.account.contract;
 
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import lombok.Builder;
+import org.apache.fineract.infrastructure.core.domain.ExternalId;
+import org.apache.fineract.portfolio.paymentdetail.domain.PaymentDetail;
 
-public interface LoanAccountTransfersService {
-
-    void updateLoanTransaction(Long loanTransactionId, LoanTransaction newLoanTransaction);
-
+@Builder
+public record LoanTransferChargePayment(Long loanId, Long chargeId, LocalDate transactionDate, BigDecimal transactionAmount,
+        PaymentDetail paymentDetail, ExternalId txnExternalId, Integer transactionType, Integer installmentNumber) {
 }

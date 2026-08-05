@@ -336,7 +336,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
                 if (accountAssociations == null) {
                     createLinkedAccountAssociation(loan, savingsAccount, changes);
                     // When the previous one was linking to a different account
-                } else if (!accountAssociations.linkedSavingsAccount().getId().equals(savingsAccountId)) {
+                } else if (!savingsAccountId.equals(accountAssociations.getLinkedSavingsAccountId())) {
                     updateLinkedAccountAssociation(accountAssociations, savingsAccount, changes);
                 }
             }
@@ -345,7 +345,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
 
     private void updateLinkedAccountAssociation(AccountAssociations accountAssociations, SavingsAccount savingsAccount,
             Map<String, Object> changes) {
-        accountAssociations.updateLinkedSavingsAccount(savingsAccount);
+        accountAssociations.updateLinkedSavingsAccount(savingsAccount.getId());
         this.accountAssociationsRepository.save(accountAssociations);
         changes.put(LoanApiConstants.linkAccountIdParameterName, savingsAccount.getId());
     }
@@ -359,7 +359,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
 
     private void createLinkedAccountAssociation(final Loan loan, final SavingsAccount savingsAccount, final Map<String, Object> changes) {
         boolean isActive = true;
-        this.accountAssociationsRepository.save(AccountAssociations.associateSavingsAccount(loan, savingsAccount,
+        this.accountAssociationsRepository.save(AccountAssociations.associateSavingsAccountToLoan(loan.getId(), savingsAccount.getId(),
                 AccountAssociationType.LINKED_ACCOUNT_ASSOCIATION.getValue(), isActive));
         changes.put(LoanApiConstants.linkAccountIdParameterName, savingsAccount.getId());
     }
@@ -807,7 +807,7 @@ public class LoanApplicationWritePlatformServiceJpaRepositoryImpl implements Loa
             }
 
             boolean isActive = true;
-            accountAssociations = AccountAssociations.associateSavingsAccount(loan, savingsAccount,
+            accountAssociations = AccountAssociations.associateSavingsAccountToLoan(loan.getId(), savingsAccount.getId(),
                     AccountAssociationType.LINKED_ACCOUNT_ASSOCIATION.getValue(), isActive);
             this.accountAssociationsRepository.save(accountAssociations);
         }

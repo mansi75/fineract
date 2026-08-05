@@ -30,8 +30,6 @@ import lombok.Getter;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
 import org.apache.fineract.organisation.monetary.domain.Money;
-import org.apache.fineract.portfolio.loanaccount.domain.LoanTransaction;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccountTransaction;
 
 @Entity
 @Table(name = "m_account_transfer_transaction")
@@ -42,21 +40,17 @@ public class AccountTransferTransaction extends AbstractPersistableCustom<Long> 
     @JoinColumn(name = "account_transfer_details_id", nullable = true)
     private AccountTransferDetails accountTransferDetails;
 
-    @ManyToOne
-    @JoinColumn(name = "from_savings_transaction_id", nullable = true)
-    private SavingsAccountTransaction fromSavingsTransaction;
+    @Column(name = "from_savings_transaction_id")
+    private Long fromSavingsTransactionId;
 
-    @ManyToOne
-    @JoinColumn(name = "to_savings_transaction_id", nullable = true)
-    private SavingsAccountTransaction toSavingsTransaction;
+    @Column(name = "to_savings_transaction_id")
+    private Long toSavingsTransactionId;
 
-    @ManyToOne
-    @JoinColumn(name = "to_loan_transaction_id", nullable = true)
-    private LoanTransaction toLoanTransaction;
+    @Column(name = "to_loan_transaction_id")
+    private Long toLoanTransactionId;
 
-    @ManyToOne
-    @JoinColumn(name = "from_loan_transaction_id", nullable = true)
-    private LoanTransaction fromLoanTransaction;
+    @Column(name = "from_loan_transaction_id")
+    private Long fromLoanTransactionId;
 
     @Column(name = "is_reversed", nullable = false)
     private boolean reversed = false;
@@ -74,24 +68,24 @@ public class AccountTransferTransaction extends AbstractPersistableCustom<Long> 
     private String description;
 
     public static AccountTransferTransaction savingsToSavingsTransfer(final AccountTransferDetails accountTransferDetails,
-            final SavingsAccountTransaction withdrawal, final SavingsAccountTransaction deposit, final LocalDate transactionDate,
-            final Money transactionAmount, final String description) {
+            final Long withdrawalId, final Long depositId, final LocalDate transactionDate, final Money transactionAmount,
+            final String description) {
 
-        return new AccountTransferTransaction(accountTransferDetails, withdrawal, deposit, null, null, transactionDate, transactionAmount,
-                description);
+        return new AccountTransferTransaction(accountTransferDetails, withdrawalId, depositId, null, null, transactionDate,
+                transactionAmount, description);
     }
 
     public static AccountTransferTransaction savingsToLoanTransfer(final AccountTransferDetails accountTransferDetails,
-            final SavingsAccountTransaction withdrawal, final LoanTransaction loanRepaymentTransaction, final LocalDate transactionDate,
-            final Money transactionAmount, final String description) {
-        return new AccountTransferTransaction(accountTransferDetails, withdrawal, null, loanRepaymentTransaction, null, transactionDate,
+            final Long withdrawalId, final Long loanRepaymentTransactionId, final LocalDate transactionDate, final Money transactionAmount,
+            final String description) {
+        return new AccountTransferTransaction(accountTransferDetails, withdrawalId, null, loanRepaymentTransactionId, null, transactionDate,
                 transactionAmount, description);
     }
 
     public static AccountTransferTransaction loanTosavingsTransfer(final AccountTransferDetails accountTransferDetails,
-            final SavingsAccountTransaction deposit, final LoanTransaction loanRefundTransaction, final LocalDate transactionDate,
-            final Money transactionAmount, final String description) {
-        return new AccountTransferTransaction(accountTransferDetails, null, deposit, null, loanRefundTransaction, transactionDate,
+            final Long depositId, final Long loanRefundTransactionId, final LocalDate transactionDate, final Money transactionAmount,
+            final String description) {
+        return new AccountTransferTransaction(accountTransferDetails, null, depositId, null, loanRefundTransactionId, transactionDate,
                 transactionAmount, description);
     }
 
@@ -99,53 +93,35 @@ public class AccountTransferTransaction extends AbstractPersistableCustom<Long> 
         //
     }
 
-    private AccountTransferTransaction(final AccountTransferDetails accountTransferDetails, final SavingsAccountTransaction withdrawal,
-            final SavingsAccountTransaction deposit, final LoanTransaction loanRepaymentTransaction,
-            final LoanTransaction loanRefundTransaction, final LocalDate transactionDate, final Money transactionAmount,
-            final String description) {
+    private AccountTransferTransaction(final AccountTransferDetails accountTransferDetails, final Long withdrawalId, final Long depositId,
+            final Long loanRepaymentTransactionId, final Long loanRefundTransactionId, final LocalDate transactionDate,
+            final Money transactionAmount, final String description) {
         this.accountTransferDetails = accountTransferDetails;
-        this.fromLoanTransaction = loanRefundTransaction;
-        this.fromSavingsTransaction = withdrawal;
-        this.toSavingsTransaction = deposit;
-        this.toLoanTransaction = loanRepaymentTransaction;
+        this.fromLoanTransactionId = loanRefundTransactionId;
+        this.fromSavingsTransactionId = withdrawalId;
+        this.toSavingsTransactionId = depositId;
+        this.toLoanTransactionId = loanRepaymentTransactionId;
         this.date = transactionDate;
         this.currency = transactionAmount.getCurrency();
         this.amount = transactionAmount.getAmountDefaultedToNullIfZero();
         this.description = description;
     }
 
-    public LoanTransaction getFromLoanTransaction() {
-        return this.fromLoanTransaction;
-    }
-
-    public SavingsAccountTransaction getFromTransaction() {
-        return this.fromSavingsTransaction;
-    }
-
-    public LoanTransaction getToLoanTransaction() {
-        return this.toLoanTransaction;
-    }
-
-    public SavingsAccountTransaction getToSavingsTransaction() {
-        return this.toSavingsTransaction;
-    }
-
     public void reverse() {
         this.reversed = true;
     }
 
-    public void updateToLoanTransaction(LoanTransaction toLoanTransaction) {
-        this.toLoanTransaction = toLoanTransaction;
+    public void updateToLoanTransaction(Long toLoanTransactionId) {
+        this.toLoanTransactionId = toLoanTransactionId;
     }
 
     public AccountTransferDetails accountTransferDetails() {
         return this.accountTransferDetails;
     }
 
-    public static AccountTransferTransaction loanToLoanTransfer(AccountTransferDetails accountTransferDetails,
-            LoanTransaction disburseTransaction, LoanTransaction repaymentTransaction, LocalDate transactionDate,
-            Money transactionMonetaryAmount, String description) {
-        return new AccountTransferTransaction(accountTransferDetails, null, null, repaymentTransaction, disburseTransaction,
+    public static AccountTransferTransaction loanToLoanTransfer(AccountTransferDetails accountTransferDetails, Long disburseTransactionId,
+            Long repaymentTransactionId, LocalDate transactionDate, Money transactionMonetaryAmount, String description) {
+        return new AccountTransferTransaction(accountTransferDetails, null, null, repaymentTransactionId, disburseTransactionId,
                 transactionDate, transactionMonetaryAmount, description);
     }
 }

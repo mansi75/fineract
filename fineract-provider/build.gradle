@@ -145,6 +145,35 @@ dependencies {
 
 apply from: 'dependencies.gradle'
 
+// Spring Modulith builds its model from the whole application classpath, which needs more memory than a unit test.
+// Keep that cost on a dedicated task instead of raising the limits for every test in this module.
+tasks.register('boundaryTest', Test) {
+    description = 'Runs the Spring Modulith cross-feature boundary tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching '*CrossFeatureBoundaryTest'
+    }
+    systemProperty 'accounttransfer.boundary.report', System.getProperty('accounttransfer.boundary.report', 'false')
+    testLogging {
+        showStandardStreams = true
+    }
+    maxHeapSize = '2g'
+    jvmArgs += ['-XX:MaxMetaspaceSize=1g']
+}
+
+test {
+    filter {
+        excludeTestsMatching '*CrossFeatureBoundaryTest'
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('boundaryTest')
+}
+
 // Configuration for the modernizer plugin
 // https://github.com/andygoossens/gradle-modernizer-plugin
 modernizer {

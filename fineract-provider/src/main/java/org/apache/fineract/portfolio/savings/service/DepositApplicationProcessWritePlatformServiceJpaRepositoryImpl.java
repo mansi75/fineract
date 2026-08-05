@@ -39,6 +39,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.infrastructure.accountnumberformat.domain.AccountNumberFormat;
 import org.apache.fineract.infrastructure.accountnumberformat.domain.AccountNumberFormatRepositoryWrapper;
 import org.apache.fineract.infrastructure.accountnumberformat.domain.EntityAccountType;
+import org.apache.fineract.infrastructure.accountnumberformat.service.AccountNumberGenerator;
 import org.apache.fineract.infrastructure.configuration.domain.ConfigurationDomainService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
@@ -58,7 +59,6 @@ import org.apache.fineract.organisation.staff.domain.StaffRepositoryWrapper;
 import org.apache.fineract.portfolio.account.domain.AccountAssociationType;
 import org.apache.fineract.portfolio.account.domain.AccountAssociations;
 import org.apache.fineract.portfolio.account.domain.AccountAssociationsRepository;
-import org.apache.fineract.portfolio.account.service.AccountNumberGenerator;
 import org.apache.fineract.portfolio.calendar.domain.Calendar;
 import org.apache.fineract.portfolio.calendar.domain.CalendarEntityType;
 import org.apache.fineract.portfolio.calendar.domain.CalendarFrequencyType;
@@ -186,8 +186,8 @@ public class DepositApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
                         DepositAccountType.SAVINGS_DEPOSIT);
                 this.depositAccountDataValidator.validatelinkedSavingsAccount(savingsAccount, account);
                 boolean isActive = true;
-                final AccountAssociations accountAssociations = AccountAssociations.associateSavingsAccount(account, savingsAccount,
-                        AccountAssociationType.LINKED_ACCOUNT_ASSOCIATION.getValue(), isActive);
+                final AccountAssociations accountAssociations = AccountAssociations.associateSavingsAccountToSavings(account.getId(),
+                        savingsAccount.getId(), AccountAssociationType.LINKED_ACCOUNT_ASSOCIATION.getValue(), isActive);
                 this.accountAssociationsRepository.save(accountAssociations);
             }
 
@@ -380,8 +380,8 @@ public class DepositApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
                 if (accountAssociations == null) {
                     isModified = true;
                 } else {
-                    final SavingsAccount savingsAccount = accountAssociations.linkedSavingsAccount();
-                    if (savingsAccount == null || !savingsAccount.getId().equals(savingsAccountId)) {
+                    final Long linkedSavingsAccountId = accountAssociations.getLinkedSavingsAccountId();
+                    if (linkedSavingsAccountId == null || !linkedSavingsAccountId.equals(savingsAccountId)) {
                         isModified = true;
                     }
                 }
@@ -391,10 +391,10 @@ public class DepositApplicationProcessWritePlatformServiceJpaRepositoryImpl impl
                     this.depositAccountDataValidator.validatelinkedSavingsAccount(savingsAccount, account);
                     if (accountAssociations == null) {
                         boolean isActive = true;
-                        accountAssociations = AccountAssociations.associateSavingsAccount(account, savingsAccount,
+                        accountAssociations = AccountAssociations.associateSavingsAccountToSavings(account.getId(), savingsAccount.getId(),
                                 AccountAssociationType.LINKED_ACCOUNT_ASSOCIATION.getValue(), isActive);
                     } else {
-                        accountAssociations.updateLinkedSavingsAccount(savingsAccount);
+                        accountAssociations.updateLinkedSavingsAccount(savingsAccount.getId());
                     }
                     changes.put(DepositsApiConstants.linkedAccountParamName, savingsAccountId);
                     this.accountAssociationsRepository.save(accountAssociations);

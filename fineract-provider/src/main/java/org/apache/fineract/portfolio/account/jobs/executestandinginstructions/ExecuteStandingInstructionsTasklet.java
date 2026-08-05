@@ -41,9 +41,7 @@ import org.apache.fineract.portfolio.account.domain.StandingInstructionType;
 import org.apache.fineract.portfolio.account.service.AccountTransfersWritePlatformService;
 import org.apache.fineract.portfolio.account.service.StandingInstructionReadPlatformService;
 import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
-import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.DefaultScheduledDateGenerator;
-import org.apache.fineract.portfolio.loanaccount.loanschedule.domain.ScheduledDateGenerator;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
+import org.apache.fineract.portfolio.common.service.PeriodFrequencyScheduleUtil;
 import org.apache.fineract.portfolio.savings.exception.InsufficientAccountBalanceException;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -71,7 +69,6 @@ public class ExecuteStandingInstructionsTasklet implements Tasklet {
             StandingInstructionType instructionType = data.getInstructionType();
             LocalDate transactionDate = DateUtils.getBusinessLocalDate();
             if (recurrenceType.isPeriodicRecurrence()) {
-                final ScheduledDateGenerator scheduledDateGenerator = new DefaultScheduledDateGenerator();
                 PeriodFrequencyType frequencyType = data.getRecurrenceFrequency();
                 LocalDate startDate = data.getValidFrom();
                 if (frequencyType.isMonthly()) {
@@ -85,7 +82,7 @@ public class ExecuteStandingInstructionsTasklet implements Tasklet {
                         startDate = startDate.plusYears(1);
                     }
                 }
-                isDueForTransfer = scheduledDateGenerator.isDateFallsInSchedule(frequencyType, data.getRecurrenceInterval(), startDate,
+                isDueForTransfer = PeriodFrequencyScheduleUtil.isDateFallsInSchedule(frequencyType, data.getRecurrenceInterval(), startDate,
                         transactionDate);
 
             }
@@ -103,14 +100,13 @@ public class ExecuteStandingInstructionsTasklet implements Tasklet {
             }
 
             if (isDueForTransfer && transactionAmount != null && transactionAmount.compareTo(BigDecimal.ZERO) > 0) {
-                final SavingsAccount fromSavingsAccount = null;
                 final boolean isRegularTransaction = true;
                 final boolean isExceptionForBalanceCheck = false;
                 AccountTransferDTO accountTransferDTO = new AccountTransferDTO(transactionDate, transactionAmount,
                         data.getFromAccountType(), data.getToAccountType(), data.getFromAccount().getId(), data.getToAccount().getId(),
                         data.getName() + " Standing instruction trasfer ", null, null, null, null, data.toTransferType(), null, null,
-                        data.getTransferType().getValue(), null, null, ExternalId.empty(), null, null, fromSavingsAccount,
-                        isRegularTransaction, isExceptionForBalanceCheck);
+                        data.getTransferType().getValue(), null, null, ExternalId.empty(), isRegularTransaction,
+                        isExceptionForBalanceCheck);
                 final boolean transferCompleted = transferAmount(errors, accountTransferDTO, data.getId());
 
                 if (transferCompleted) {

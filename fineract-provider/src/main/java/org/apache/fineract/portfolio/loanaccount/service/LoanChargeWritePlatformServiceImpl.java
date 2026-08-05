@@ -134,7 +134,6 @@ import org.apache.fineract.portfolio.note.domain.Note;
 import org.apache.fineract.portfolio.note.domain.NoteRepository;
 import org.apache.fineract.portfolio.paymentdetail.domain.PaymentDetail;
 import org.apache.fineract.portfolio.paymentdetail.service.PaymentDetailWritePlatformService;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -672,18 +671,19 @@ public class LoanChargeWritePlatformServiceImpl implements LoanChargeWritePlatfo
             final String errorMessage = "Charge with id:" + loanChargeId + " requires linked savings account for payment";
             throw new LinkedAccountRequiredException("loanCharge.pay", errorMessage, loanChargeId);
         }
-        final SavingsAccount fromSavingsAccount = null;
         final boolean isRegularTransaction = true;
         final boolean isExceptionForBalanceCheck = false;
         final AccountTransferDTO accountTransferDTO = new AccountTransferDTO(transactionDate, amount, PortfolioAccountType.SAVINGS,
                 PortfolioAccountType.LOAN, portfolioAccountData.getId(), loanId, "Loan Charge Payment", locale, fmt, null, null,
                 LoanTransactionType.CHARGE_PAYMENT.getValue(), loanChargeId, loanInstallmentNumber,
-                AccountTransferType.CHARGE_PAYMENT.getValue(), null, null, externalId, null, null, fromSavingsAccount, isRegularTransaction,
-                isExceptionForBalanceCheck);
+                AccountTransferType.CHARGE_PAYMENT.getValue(), null, null, externalId, isRegularTransaction, isExceptionForBalanceCheck);
         Long transferTransactionId = this.accountTransfersWritePlatformService.transferFunds(accountTransferDTO);
         AccountTransferDetails transferDetails = this.accountTransferDetailRepository.findById(transferTransactionId)
                 .orElseThrow(() -> new AccountTransferNotFoundException(transferTransactionId));
-        LoanTransaction loanTransaction = transferDetails.getAccountTransferTransactions().get(0).getToLoanTransaction();
+        LoanTransaction loanTransaction = this.loanTransactionRepository
+                .findById(transferDetails.getAccountTransferTransactions().get(0).getToLoanTransactionId())
+                .orElseThrow(() -> new LoanTransactionNotFoundException(
+                        transferDetails.getAccountTransferTransactions().get(0).getToLoanTransactionId()));
         businessEventNotifierService.notifyPostBusinessEvent(new LoanBalanceChangedBusinessEvent(loan));
         return new CommandProcessingResultBuilder() //
                 .withCommandId(command.commandId()) //

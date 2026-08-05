@@ -25,6 +25,7 @@ dependencies {
     }
 
     implementation(project(path: ':fineract-core'))
+    implementation 'org.springframework.modulith:spring-modulith-api'
     implementation(project(path: ':fineract-cob'))
     implementation(project(path: ':fineract-command'))
     implementation(project(path: ':fineract-command-audit'))
@@ -227,9 +228,11 @@ dependencies {
         exclude group: 'org.skyscreamer'
     }
     testImplementation ('org.mockito:mockito-inline')
+    testImplementation ('org.springframework.modulith:spring-modulith-core')
 
     testRuntimeOnly(
             'org.mariadb.jdbc:mariadb-java-client',
             'com.mysql:mysql-connector-j',
+            'org.osgi:org.osgi.core',
             )
 }

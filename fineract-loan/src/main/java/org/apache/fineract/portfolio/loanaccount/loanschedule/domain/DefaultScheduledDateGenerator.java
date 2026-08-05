@@ -22,7 +22,6 @@ import java.math.MathContext;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoField;
-import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +38,7 @@ import org.apache.fineract.portfolio.calendar.domain.Calendar;
 import org.apache.fineract.portfolio.calendar.domain.CalendarHistory;
 import org.apache.fineract.portfolio.calendar.service.CalendarUtils;
 import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
+import org.apache.fineract.portfolio.common.service.PeriodFrequencyScheduleUtil;
 import org.apache.fineract.portfolio.loanaccount.data.HolidayDetailDTO;
 import org.apache.fineract.portfolio.loanaccount.data.LoanTermVariationsData;
 import org.springframework.stereotype.Component;
@@ -335,43 +335,7 @@ public class DefaultScheduledDateGenerator implements ScheduledDateGenerator {
     @Override
     public Boolean isDateFallsInSchedule(final PeriodFrequencyType frequency, final int repaidEvery, final LocalDate startDate,
             final LocalDate date) {
-        boolean isScheduledDate = false;
-        switch (frequency) {
-            case DAYS:
-                int diff = DateUtils.getExactDifferenceInDays(startDate, date);
-                isScheduledDate = (diff % repaidEvery) == 0;
-            break;
-            case WEEKS:
-                int weekDiff = DateUtils.getExactDifference(startDate, date, ChronoUnit.WEEKS);
-                isScheduledDate = (weekDiff % repaidEvery) == 0;
-                if (isScheduledDate) {
-                    LocalDate modifiedDate = startDate.plusWeeks(weekDiff);
-                    isScheduledDate = DateUtils.isEqual(modifiedDate, date);
-                }
-            break;
-            case MONTHS:
-                int monthDiff = DateUtils.getExactDifference(startDate, date, ChronoUnit.MONTHS);
-                isScheduledDate = (monthDiff % repaidEvery) == 0;
-                if (isScheduledDate) {
-                    LocalDate modifiedDate = startDate.plusMonths(monthDiff);
-                    isScheduledDate = DateUtils.isEqual(modifiedDate, date);
-                }
-            break;
-            case YEARS:
-                int yearDiff = DateUtils.getExactDifference(startDate, date, ChronoUnit.YEARS);
-                isScheduledDate = (yearDiff % repaidEvery) == 0;
-                if (isScheduledDate) {
-                    LocalDate modifiedDate = startDate.plusYears(yearDiff);
-                    isScheduledDate = DateUtils.isEqual(modifiedDate, date);
-                }
-            break;
-            case INVALID:
-            break;
-            case WHOLE_TERM:
-            // TODO: Implement getRepaymentPeriodDate for WHOLE_TERM
-            break;
-        }
-        return isScheduledDate;
+        return PeriodFrequencyScheduleUtil.isDateFallsInSchedule(frequency, repaidEvery, startDate, date);
     }
 
     @Override

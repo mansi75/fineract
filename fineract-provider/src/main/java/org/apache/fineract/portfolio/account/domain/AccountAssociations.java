@@ -20,32 +20,26 @@ package org.apache.fineract.portfolio.account.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
-import org.apache.fineract.portfolio.loanaccount.domain.Loan;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
 
 @Entity
 @Table(name = "m_portfolio_account_associations")
+@Getter
 public class AccountAssociations extends AbstractPersistableCustom<Long> {
 
-    @ManyToOne
-    @JoinColumn(name = "loan_account_id", nullable = true)
-    private Loan loanAccount;
+    @Column(name = "loan_account_id")
+    private Long loanAccountId;
 
-    @ManyToOne
-    @JoinColumn(name = "savings_account_id", nullable = true)
-    private SavingsAccount savingsAccount;
+    @Column(name = "savings_account_id")
+    private Long savingsAccountId;
 
-    @ManyToOne
-    @JoinColumn(name = "linked_loan_account_id", nullable = true)
-    private Loan linkedLoanAccount;
+    @Column(name = "linked_loan_account_id")
+    private Long linkedLoanAccountId;
 
-    @ManyToOne
-    @JoinColumn(name = "linked_savings_account_id", nullable = true)
-    private SavingsAccount linkedSavingsAccount;
+    @Column(name = "linked_savings_account_id")
+    private Long linkedSavingsAccountId;
 
     @Column(name = "association_type_enum", nullable = false)
     private Integer associationType;
@@ -55,31 +49,27 @@ public class AccountAssociations extends AbstractPersistableCustom<Long> {
 
     protected AccountAssociations() {}
 
-    private AccountAssociations(final Loan loanAccount, final SavingsAccount savingsAccount, final Loan linkedLoanAccount,
-            final SavingsAccount linkedSavingsAccount, final Integer associationType, boolean active) {
-        this.loanAccount = loanAccount;
-        this.savingsAccount = savingsAccount;
-        this.linkedLoanAccount = linkedLoanAccount;
-        this.linkedSavingsAccount = linkedSavingsAccount;
+    private AccountAssociations(final Long loanAccountId, final Long savingsAccountId, final Long linkedLoanAccountId,
+            final Long linkedSavingsAccountId, final Integer associationType, boolean active) {
+        this.loanAccountId = loanAccountId;
+        this.savingsAccountId = savingsAccountId;
+        this.linkedLoanAccountId = linkedLoanAccountId;
+        this.linkedSavingsAccountId = linkedSavingsAccountId;
         this.associationType = associationType;
         this.active = active;
     }
 
-    public static AccountAssociations associateSavingsAccount(final Loan loan, final SavingsAccount savingsAccount,
+    public static AccountAssociations associateSavingsAccountToLoan(final Long loanId, final Long linkedSavingsAccountId,
             final Integer associationType, boolean isActive) {
-        return new AccountAssociations(loan, null, null, savingsAccount, associationType, isActive);
+        return new AccountAssociations(loanId, null, null, linkedSavingsAccountId, associationType, isActive);
     }
 
-    public static AccountAssociations associateSavingsAccount(final SavingsAccount savingsAccount,
-            final SavingsAccount linkedSavingsAccount, final Integer associationType, boolean isActive) {
-        return new AccountAssociations(null, savingsAccount, null, linkedSavingsAccount, associationType, isActive);
+    public static AccountAssociations associateSavingsAccountToSavings(final Long savingsAccountId, final Long linkedSavingsAccountId,
+            final Integer associationType, boolean isActive) {
+        return new AccountAssociations(null, savingsAccountId, null, linkedSavingsAccountId, associationType, isActive);
     }
 
-    public SavingsAccount linkedSavingsAccount() {
-        return this.linkedSavingsAccount;
-    }
-
-    public void updateLinkedSavingsAccount(final SavingsAccount savingsAccount) {
-        this.linkedSavingsAccount = savingsAccount;
+    public void updateLinkedSavingsAccount(final Long linkedSavingsAccountId) {
+        this.linkedSavingsAccountId = linkedSavingsAccountId;
     }
 }

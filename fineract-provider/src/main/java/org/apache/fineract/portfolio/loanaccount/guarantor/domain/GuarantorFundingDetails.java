@@ -32,7 +32,6 @@ import java.util.List;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 import org.apache.fineract.portfolio.account.domain.AccountAssociations;
 import org.apache.fineract.portfolio.loanaccount.domain.Loan;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
 
 @Entity
 @Table(name = "m_guarantor_funding_details")
@@ -85,8 +84,8 @@ public class GuarantorFundingDetails extends AbstractPersistableCustom<Long> {
         return GuarantorFundStatusType.fromInt(this.status);
     }
 
-    public SavingsAccount getLinkedSavingsAccount() {
-        return accountAssociations.linkedSavingsAccount();
+    public Long getLinkedSavingsAccountId() {
+        return accountAssociations.getLinkedSavingsAccountId();
     }
 
     public Loan getLoanAccount() {

@@ -18,6 +18,7 @@
  */
 package org.apache.fineract.portfolio.account.service;
 
+import static org.apache.fineract.portfolio.account.AccountDetailConstants.fromAccountIdParamName;
 import static org.apache.fineract.portfolio.account.AccountDetailConstants.fromAccountTypeParamName;
 import static org.apache.fineract.portfolio.account.AccountDetailConstants.fromClientIdParamName;
 import static org.apache.fineract.portfolio.account.AccountDetailConstants.toAccountTypeParamName;
@@ -32,8 +33,11 @@ import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
+import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
 import org.apache.fineract.portfolio.account.PortfolioAccountType;
 import org.apache.fineract.portfolio.account.api.StandingInstructionApiConstants;
+import org.apache.fineract.portfolio.account.contract.AccountTransferLoanService;
+import org.apache.fineract.portfolio.account.contract.AccountTransferSavingsService;
 import org.apache.fineract.portfolio.account.data.StandingInstructionDataValidator;
 import org.apache.fineract.portfolio.account.domain.AccountTransferDetailRepository;
 import org.apache.fineract.portfolio.account.domain.AccountTransferDetails;
@@ -55,6 +59,8 @@ public class StandingInstructionWritePlatformServiceImpl implements StandingInst
     private final StandingInstructionAssembler standingInstructionAssembler;
     private final AccountTransferDetailRepository accountTransferDetailRepository;
     private final StandingInstructionRepository standingInstructionRepository;
+    private final AccountTransferSavingsService accountTransferSavingsService;
+    private final AccountTransferLoanService accountTransferLoanService;
 
     @Transactional
     @Override
@@ -69,21 +75,24 @@ public class StandingInstructionWritePlatformServiceImpl implements StandingInst
         final PortfolioAccountType toAccountType = PortfolioAccountType.fromInt(toAccountTypeId);
 
         final Long fromClientId = command.longValueOfParameterNamed(fromClientIdParamName);
+        final Long fromAccountId = command.longValueOfParameterNamed(fromAccountIdParamName);
 
         Long standingInstructionId = null;
         try {
             if (isSavingsToSavingsAccountTransfer(fromAccountType, toAccountType)) {
                 final AccountTransferDetails standingInstruction = this.standingInstructionAssembler
-                        .assembleSavingsToSavingsTransfer(command);
+                        .assembleSavingsToSavingsTransfer(command, savingsAccountCurrency(fromAccountId));
                 this.accountTransferDetailRepository.saveAndFlush(standingInstruction);
                 standingInstructionId = standingInstruction.accountTransferStandingInstruction().getId();
             } else if (isSavingsToLoanAccountTransfer(fromAccountType, toAccountType)) {
-                final AccountTransferDetails standingInstruction = this.standingInstructionAssembler.assembleSavingsToLoanTransfer(command);
+                final AccountTransferDetails standingInstruction = this.standingInstructionAssembler.assembleSavingsToLoanTransfer(command,
+                        savingsAccountCurrency(fromAccountId));
                 this.accountTransferDetailRepository.saveAndFlush(standingInstruction);
                 standingInstructionId = standingInstruction.accountTransferStandingInstruction().getId();
             } else if (isLoanToSavingsAccountTransfer(fromAccountType, toAccountType)) {
 
-                final AccountTransferDetails standingInstruction = this.standingInstructionAssembler.assembleLoanToSavingsTransfer(command);
+                final AccountTransferDetails standingInstruction = this.standingInstructionAssembler.assembleLoanToSavingsTransfer(command,
+                        loanAccountCurrency(fromAccountId));
                 this.accountTransferDetailRepository.saveAndFlush(standingInstruction);
                 standingInstructionId = standingInstruction.accountTransferStandingInstruction().getId();
 
@@ -97,6 +106,14 @@ public class StandingInstructionWritePlatformServiceImpl implements StandingInst
                 .withEntityId(standingInstructionId) //
                 .withClientId(fromClientId);
         return builder.build();
+    }
+
+    private MonetaryCurrency savingsAccountCurrency(final Long savingsAccountId) {
+        return this.accountTransferSavingsService.retrieveAccountDetail(savingsAccountId).currency();
+    }
+
+    private MonetaryCurrency loanAccountCurrency(final Long loanAccountId) {
+        return this.accountTransferLoanService.retrieveAccountDetail(loanAccountId).currency();
     }
 
     private void handleDataIntegrityIssues(final JsonCommand command, Throwable realCause, final NonTransientDataAccessException dve) {

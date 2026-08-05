@@ -20,6 +20,7 @@ package org.apache.fineract.portfolio.loanaccount.starter;
 
 import org.apache.fineract.cob.service.LoanAccountLockService;
 import org.apache.fineract.infrastructure.accountnumberformat.domain.AccountNumberFormatRepositoryWrapper;
+import org.apache.fineract.infrastructure.accountnumberformat.service.AccountNumberGenerator;
 import org.apache.fineract.infrastructure.codes.domain.CodeValueRepository;
 import org.apache.fineract.infrastructure.codes.domain.CodeValueRepositoryWrapper;
 import org.apache.fineract.infrastructure.codes.service.CodeValueReadPlatformService;
@@ -44,7 +45,6 @@ import org.apache.fineract.organisation.workingdays.domain.WorkingDaysRepository
 import org.apache.fineract.portfolio.account.domain.AccountAssociationsRepository;
 import org.apache.fineract.portfolio.account.domain.AccountTransferDetailRepository;
 import org.apache.fineract.portfolio.account.service.AccountAssociationsReadPlatformService;
-import org.apache.fineract.portfolio.account.service.AccountNumberGenerator;
 import org.apache.fineract.portfolio.account.service.AccountTransfersReadPlatformService;
 import org.apache.fineract.portfolio.account.service.AccountTransfersWritePlatformService;
 import org.apache.fineract.portfolio.accountdetails.service.AccountDetailsReadPlatformService;
@@ -428,9 +428,9 @@ public class LoanAccountConfiguration {
             FromJsonHelper fromApiJsonHelper, CalendarRepository calendarRepository,
             LoanScheduleHistoryWritePlatformService loanScheduleHistoryWritePlatformService,
             LoanApplicationValidator loanApplicationValidator, AccountAssociationsRepository accountAssociationRepository,
-            AccountTransferDetailRepository accountTransferDetailRepository, BusinessEventNotifierService businessEventNotifierService,
-            GuarantorDomainService guarantorDomainService, LoanUtilService loanUtilService,
-            EntityDatatableChecksWritePlatformService entityDatatableChecksWritePlatformService,
+            SavingsAccountRepositoryWrapper savingsAccountRepository, AccountTransferDetailRepository accountTransferDetailRepository,
+            BusinessEventNotifierService businessEventNotifierService, GuarantorDomainService guarantorDomainService,
+            LoanUtilService loanUtilService, EntityDatatableChecksWritePlatformService entityDatatableChecksWritePlatformService,
             CodeValueRepositoryWrapper codeValueRepository, CashierTransactionDataValidator cashierTransactionDataValidator,
             GLIMAccountInfoRepository glimRepository, LoanRepository loanRepository,
             RepaymentWithPostDatedChecksAssembler repaymentWithPostDatedChecksAssembler,
@@ -453,9 +453,9 @@ public class LoanAccountConfiguration {
                 holidayRepository, configurationDomainService, workingDaysRepository, accountTransfersWritePlatformService,
                 accountTransfersReadPlatformService, accountAssociationsReadPlatformService, loanReadPlatformService, fromApiJsonHelper,
                 calendarRepository, loanScheduleHistoryWritePlatformService, loanApplicationValidator, accountAssociationRepository,
-                accountTransferDetailRepository, businessEventNotifierService, guarantorDomainService, loanUtilService,
-                entityDatatableChecksWritePlatformService, codeValueRepository, cashierTransactionDataValidator, glimRepository,
-                loanRepository, repaymentWithPostDatedChecksAssembler, postDatedChecksRepository,
+                savingsAccountRepository, accountTransferDetailRepository, businessEventNotifierService, guarantorDomainService,
+                loanUtilService, entityDatatableChecksWritePlatformService, codeValueRepository, cashierTransactionDataValidator,
+                glimRepository, loanRepository, repaymentWithPostDatedChecksAssembler, postDatedChecksRepository,
                 loanRepaymentScheduleInstallmentRepository, loanLifecycleStateMachine, loanAccountLockService, externalIdFactory,
                 loanAccrualTransactionBusinessEventService, errorHandler, loanDownPaymentHandlerService, loanTransactionAssembler,
                 loanAccrualsProcessingService, loanOfficerValidator, loanDownPaymentTransactionValidator, loanDisbursementService,

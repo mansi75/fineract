@@ -143,7 +143,7 @@ public class ReprocessLoanTransactionsServiceImpl implements ReprocessLoanTransa
                     businessEventNotifierService.notifyPostBusinessEvent(businessEvent);
                 }
                 if (oldTransaction != null) {
-                    loanAccountTransfersService.updateLoanTransaction(oldTransaction.getId(), newTransaction);
+                    loanAccountTransfersService.updateLoanTransaction(oldTransaction.getId(), newTransaction.getId());
                 }
             }
 

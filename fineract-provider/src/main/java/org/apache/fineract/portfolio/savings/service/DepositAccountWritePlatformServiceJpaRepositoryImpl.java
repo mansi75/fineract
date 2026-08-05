@@ -173,14 +173,13 @@ public class DepositAccountWritePlatformServiceJpaRepositoryImpl implements Depo
                     this.depositAccountDomainService.handleFDDeposit(account, fmt, account.getActivationDate(),
                             amountForDeposit.getAmount(), paymentDetail);
                 } else {
-                    final SavingsAccount fromSavingsAccount = null;
                     boolean isRegularTransaction = false;
                     final boolean isExceptionForBalanceCheck = false;
                     final AccountTransferDTO accountTransferDTO = new AccountTransferDTO(account.getActivationDate(),
                             amountForDeposit.getAmount(), PortfolioAccountType.SAVINGS, PortfolioAccountType.SAVINGS,
                             portfolioAccountData.getId(), account.getId(), "Account Transfer", locale, fmt, null, null, null, null, null,
-                            AccountTransferType.ACCOUNT_TRANSFER.getValue(), null, null, ExternalId.empty(), null, account,
-                            fromSavingsAccount, isRegularTransaction, isExceptionForBalanceCheck);
+                            AccountTransferType.ACCOUNT_TRANSFER.getValue(), null, null, ExternalId.empty(), isRegularTransaction,
+                            isExceptionForBalanceCheck);
                     this.accountTransfersWritePlatformService.transferFunds(accountTransferDTO);
                 }
                 final boolean isInterestTransfer = false;
@@ -280,12 +279,11 @@ public class DepositAccountWritePlatformServiceJpaRepositoryImpl implements Depo
                             amountForDeposit.getAmount(), null, isRegularTransaction);
                 } else {
                     final boolean isExceptionForBalanceCheck = false;
-                    final SavingsAccount fromSavingsAccount = null;
                     final AccountTransferDTO accountTransferDTO = new AccountTransferDTO(account.getActivationDate(),
                             amountForDeposit.getAmount(), PortfolioAccountType.SAVINGS, PortfolioAccountType.SAVINGS,
                             portfolioAccountData.getId(), account.getId(), "Account Transfer", locale, fmt, null, null, null, null, null,
-                            AccountTransferType.ACCOUNT_TRANSFER.getValue(), null, null, ExternalId.empty(), null, account,
-                            fromSavingsAccount, isRegularTransaction, isExceptionForBalanceCheck);
+                            AccountTransferType.ACCOUNT_TRANSFER.getValue(), null, null, ExternalId.empty(), isRegularTransaction,
+                            isExceptionForBalanceCheck);
                     this.accountTransfersWritePlatformService.transferFunds(accountTransferDTO);
                 }
                 updateExistingTransactionsDetails(account, existingTransactionIds, existingReversedTransactionIds);

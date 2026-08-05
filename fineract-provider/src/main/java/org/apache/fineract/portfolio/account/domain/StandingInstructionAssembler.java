@@ -18,6 +18,8 @@
  */
 package org.apache.fineract.portfolio.account.domain;
 
+import static org.apache.fineract.portfolio.account.AccountDetailConstants.fromAccountIdParamName;
+import static org.apache.fineract.portfolio.account.AccountDetailConstants.toAccountIdParamName;
 import static org.apache.fineract.portfolio.account.api.StandingInstructionApiConstants.amountParamName;
 import static org.apache.fineract.portfolio.account.api.StandingInstructionApiConstants.instructionTypeParamName;
 import static org.apache.fineract.portfolio.account.api.StandingInstructionApiConstants.nameParamName;
@@ -33,36 +35,47 @@ import static org.apache.fineract.portfolio.account.api.StandingInstructionApiCo
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.MonthDay;
+import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
+import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
 import org.apache.fineract.organisation.monetary.domain.Money;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class StandingInstructionAssembler {
 
     private final AccountTransferDetailAssembler accountTransferDetailAssembler;
 
-    @Autowired
-    public StandingInstructionAssembler(final AccountTransferDetailAssembler accountTransferDetailAssembler) {
-
-        this.accountTransferDetailAssembler = accountTransferDetailAssembler;
-    }
-
-    public AccountTransferDetails assembleSavingsToSavingsTransfer(final JsonCommand command) {
-        final AccountTransferDetails accountTransferDetails = this.accountTransferDetailAssembler.assembleSavingsToSavingsTransfer(command);
-        assembleStandingInstruction(command, accountTransferDetails);
+    public AccountTransferDetails assembleSavingsToSavingsTransfer(final JsonCommand command, final MonetaryCurrency fromAccountCurrency) {
+        final AccountTransferDetails accountTransferDetails = this.accountTransferDetailAssembler.assembleSavingsToSavingsTransfer(command,
+                fromAccountId(command), toAccountId(command));
+        assembleStandingInstruction(command, accountTransferDetails, fromAccountCurrency);
         return accountTransferDetails;
     }
 
-    public void assembleStandingInstruction(final JsonCommand command, final AccountTransferDetails accountTransferDetails) {
+    public AccountTransferDetails assembleSavingsToLoanTransfer(final JsonCommand command, final MonetaryCurrency fromAccountCurrency) {
+        final AccountTransferDetails accountTransferDetails = this.accountTransferDetailAssembler.assembleSavingsToLoanTransfer(command,
+                fromAccountId(command), toAccountId(command));
+        assembleStandingInstruction(command, accountTransferDetails, fromAccountCurrency);
+        return accountTransferDetails;
+    }
+
+    public AccountTransferDetails assembleLoanToSavingsTransfer(final JsonCommand command, final MonetaryCurrency fromAccountCurrency) {
+        final AccountTransferDetails accountTransferDetails = this.accountTransferDetailAssembler.assembleLoanToSavingsTransfer(command,
+                fromAccountId(command), toAccountId(command));
+        assembleStandingInstruction(command, accountTransferDetails, fromAccountCurrency);
+        return accountTransferDetails;
+    }
+
+    public void assembleStandingInstruction(final JsonCommand command, final AccountTransferDetails accountTransferDetails,
+            final MonetaryCurrency fromAccountCurrency) {
         final LocalDate validFrom = command.localDateValueOfParameterNamed(validFromParamName);
         final LocalDate validTill = command.localDateValueOfParameterNamed(validTillParamName);
         BigDecimal amount = null;
         final BigDecimal transferAmount = command.bigDecimalValueOfParameterNamed(amountParamName);
         if (transferAmount != null) {
-            final Money monetaryAmount = Money.of(accountTransferDetails.fromSavingsAccount().getCurrency(), transferAmount);
-            amount = monetaryAmount.getAmount();
+            amount = Money.of(fromAccountCurrency, transferAmount).getAmount();
         }
         final Integer status = command.integerValueOfParameterNamed(statusParamName);
         final Integer priority = command.integerValueOfParameterNamed(priorityParamName);
@@ -78,16 +91,11 @@ public class StandingInstructionAssembler {
         accountTransferDetails.updateAccountTransferStandingInstruction(accountTransferStandingInstruction);
     }
 
-    public AccountTransferDetails assembleSavingsToLoanTransfer(final JsonCommand command) {
-        final AccountTransferDetails accountTransferDetails = this.accountTransferDetailAssembler.assembleSavingsToLoanTransfer(command);
-        assembleStandingInstruction(command, accountTransferDetails);
-        return accountTransferDetails;
+    private Long fromAccountId(final JsonCommand command) {
+        return command.longValueOfParameterNamed(fromAccountIdParamName);
     }
 
-    public AccountTransferDetails assembleLoanToSavingsTransfer(final JsonCommand command) {
-        final AccountTransferDetails accountTransferDetails = this.accountTransferDetailAssembler.assembleLoanToSavingsTransfer(command);
-        assembleStandingInstruction(command, accountTransferDetails);
-        return accountTransferDetails;
+    private Long toAccountId(final JsonCommand command) {
+        return command.longValueOfParameterNamed(toAccountIdParamName);
     }
-
 }
