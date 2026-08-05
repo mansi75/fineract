@@ -22,9 +22,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
 import org.apache.fineract.portfolio.tax.domain.TaxComponent;
-import org.apache.fineract.portfolio.tax.domain.TaxGroup;
 
 public interface ChargeTaxApplicationService {
 
-    Map<TaxComponent, BigDecimal> computeTax(TaxGroup taxGroup, BigDecimal baseAmount, LocalDate effectiveDate, int scale);
+    Map<TaxComponent, BigDecimal> computeTax(Long taxGroupId, BigDecimal baseAmount, LocalDate effectiveDate, int scale);
 }

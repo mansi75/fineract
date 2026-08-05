@@ -22,19 +22,25 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.apache.fineract.portfolio.tax.domain.TaxComponent;
 import org.apache.fineract.portfolio.tax.domain.TaxGroup;
+import org.apache.fineract.portfolio.tax.domain.TaxGroupRepositoryWrapper;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class ChargeTaxApplicationServiceImpl implements ChargeTaxApplicationService {
 
+    private final TaxGroupRepositoryWrapper taxGroupRepository;
+
     @Override
-    public Map<TaxComponent, BigDecimal> computeTax(final TaxGroup taxGroup, final BigDecimal baseAmount, final LocalDate effectiveDate,
+    public Map<TaxComponent, BigDecimal> computeTax(final Long taxGroupId, final BigDecimal baseAmount, final LocalDate effectiveDate,
             final int scale) {
-        if (taxGroup == null || baseAmount == null || baseAmount.compareTo(BigDecimal.ZERO) == 0) {
+        if (taxGroupId == null || baseAmount == null || baseAmount.compareTo(BigDecimal.ZERO) == 0) {
             return Collections.emptyMap();
         }
+        final TaxGroup taxGroup = this.taxGroupRepository.findOneWithNotFoundDetection(taxGroupId);
         return TaxUtils.splitTax(baseAmount, effectiveDate, taxGroup.getTaxGroupMappings(), scale);
     }
 }

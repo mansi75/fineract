@@ -41,7 +41,6 @@ import org.apache.fineract.portfolio.loanaccount.domain.LoanChargeTaxDetails;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanLifecycleStateMachine;
 import org.apache.fineract.portfolio.loanaccount.serialization.LoanChargeValidator;
 import org.apache.fineract.portfolio.tax.domain.TaxComponent;
-import org.apache.fineract.portfolio.tax.domain.TaxGroup;
 import org.apache.fineract.portfolio.tax.service.ChargeTaxApplicationService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,6 +53,8 @@ class LoanChargeServiceTaxTest {
     private static MockedStatic<DateUtils> dateUtilsMock;
 
     private static final LocalDate BUSINESS_DATE = LocalDate.of(2026, 4, 10);
+
+    private static final Long TAX_GROUP_ID = 1L;
 
     @BeforeAll
     static void setUpStatics() {
@@ -95,15 +96,13 @@ class LoanChargeServiceTaxTest {
     void populateDerivedFields_doesNotInflateAmount_whenTaxGroupIsConfigured() {
         // base = 1000, tax = 160 (16 %) → amount stays 1000, taxAmount = 160
         TaxComponent component = mock(TaxComponent.class);
-        TaxGroup taxGroup = mock(TaxGroup.class);
-
         ChargeTaxApplicationService taxService = mock(ChargeTaxApplicationService.class);
-        when(taxService.computeTax(any(TaxGroup.class), any(BigDecimal.class), any(LocalDate.class), anyInt()))
+        when(taxService.computeTax(any(Long.class), any(BigDecimal.class), any(LocalDate.class), anyInt()))
                 .thenReturn(Map.of(component, new BigDecimal("160.000000")));
 
         LoanChargeService service = buildService(taxService);
 
-        Charge charge = flatCharge(taxGroup);
+        Charge charge = flatCharge(TAX_GROUP_ID);
         LoanCharge loanCharge = loanCharge(charge, new BigDecimal("1000.00"), null);
 
         service.populateDerivedFields(loanCharge, BigDecimal.ZERO, new BigDecimal("1000.00"), null, BigDecimal.ZERO);
@@ -116,14 +115,12 @@ class LoanChargeServiceTaxTest {
     void populateDerivedFields_populatesTaxDetails_forEachTaxComponent() {
         TaxComponent comp1 = mock(TaxComponent.class);
         TaxComponent comp2 = mock(TaxComponent.class);
-        TaxGroup taxGroup = mock(TaxGroup.class);
-
         ChargeTaxApplicationService taxService = mock(ChargeTaxApplicationService.class);
         when(taxService.computeTax(any(), any(), any(), anyInt()))
                 .thenReturn(Map.of(comp1, new BigDecimal("10.000000"), comp2, new BigDecimal("5.000000")));
 
         LoanChargeService service = buildService(taxService);
-        Charge charge = flatCharge(taxGroup);
+        Charge charge = flatCharge(TAX_GROUP_ID);
         LoanCharge loanCharge = loanCharge(charge, new BigDecimal("100.00"), null);
 
         service.populateDerivedFields(loanCharge, BigDecimal.ZERO, new BigDecimal("100.00"), null, BigDecimal.ZERO);
@@ -136,13 +133,11 @@ class LoanChargeServiceTaxTest {
     void populateDerivedFields_setsAmountOutstanding_fromOriginalAmount() {
         // base = 500, tax = 75 → amount stays 500, outstanding = 500 (tax is not added to amount)
         TaxComponent component = mock(TaxComponent.class);
-        TaxGroup taxGroup = mock(TaxGroup.class);
-
         ChargeTaxApplicationService taxService = mock(ChargeTaxApplicationService.class);
         when(taxService.computeTax(any(), any(), any(), anyInt())).thenReturn(Map.of(component, new BigDecimal("75.000000")));
 
         LoanChargeService service = buildService(taxService);
-        Charge charge = flatCharge(taxGroup);
+        Charge charge = flatCharge(TAX_GROUP_ID);
         LoanCharge loanCharge = loanCharge(charge, new BigDecimal("500.00"), null);
 
         service.populateDerivedFields(loanCharge, BigDecimal.ZERO, new BigDecimal("500.00"), null, BigDecimal.ZERO);
@@ -152,13 +147,11 @@ class LoanChargeServiceTaxTest {
 
     @Test
     void populateDerivedFields_doesNotMutateCharge_whenComputedTaxIsZero() {
-        TaxGroup taxGroup = mock(TaxGroup.class);
-
         ChargeTaxApplicationService taxService = mock(ChargeTaxApplicationService.class);
         when(taxService.computeTax(any(), any(), any(), anyInt())).thenReturn(Collections.emptyMap());
 
         LoanChargeService service = buildService(taxService);
-        Charge charge = flatCharge(taxGroup);
+        Charge charge = flatCharge(TAX_GROUP_ID);
         LoanCharge loanCharge = loanCharge(charge, new BigDecimal("200.00"), null);
 
         service.populateDerivedFields(loanCharge, BigDecimal.ZERO, new BigDecimal("200.00"), null, BigDecimal.ZERO);
@@ -171,49 +164,43 @@ class LoanChargeServiceTaxTest {
     void populateDerivedFields_usesSubmittedOnDate_asEffectiveDateForTax() {
         LocalDate submittedOn = LocalDate.of(2026, 1, 15);
         TaxComponent component = mock(TaxComponent.class);
-        TaxGroup taxGroup = mock(TaxGroup.class);
-
         ChargeTaxApplicationService taxService = mock(ChargeTaxApplicationService.class);
         when(taxService.computeTax(any(), any(), any(), anyInt())).thenReturn(Map.of(component, new BigDecimal("20.000000")));
 
         LoanChargeService service = buildService(taxService);
-        Charge charge = flatCharge(taxGroup);
+        Charge charge = flatCharge(TAX_GROUP_ID);
         LoanCharge loanCharge = loanCharge(charge, new BigDecimal("200.00"), submittedOn);
 
         service.populateDerivedFields(loanCharge, BigDecimal.ZERO, new BigDecimal("200.00"), null, BigDecimal.ZERO);
 
-        org.mockito.Mockito.verify(taxService).computeTax(taxGroup, new BigDecimal("200.00"), submittedOn, 6);
+        org.mockito.Mockito.verify(taxService).computeTax(TAX_GROUP_ID, new BigDecimal("200.00"), submittedOn, 6);
     }
 
     @Test
     void populateDerivedFields_usesBusinessDate_whenSubmittedOnDateIsNull() {
         TaxComponent component = mock(TaxComponent.class);
-        TaxGroup taxGroup = mock(TaxGroup.class);
-
         ChargeTaxApplicationService taxService = mock(ChargeTaxApplicationService.class);
         when(taxService.computeTax(any(), any(), any(), anyInt())).thenReturn(Map.of(component, new BigDecimal("10.000000")));
 
         LoanChargeService service = buildService(taxService);
-        Charge charge = flatCharge(taxGroup);
+        Charge charge = flatCharge(TAX_GROUP_ID);
         LoanCharge loanCharge = loanCharge(charge, new BigDecimal("100.00"), null /* no submittedOnDate */);
 
         service.populateDerivedFields(loanCharge, BigDecimal.ZERO, new BigDecimal("100.00"), null, BigDecimal.ZERO);
 
-        org.mockito.Mockito.verify(taxService).computeTax(taxGroup, new BigDecimal("100.00"), BUSINESS_DATE, 6);
+        org.mockito.Mockito.verify(taxService).computeTax(TAX_GROUP_ID, new BigDecimal("100.00"), BUSINESS_DATE, 6);
     }
 
     @Test
     void populateDerivedFields_clearsPreviousTaxDetails_onReapplication() {
         TaxComponent comp1 = mock(TaxComponent.class);
         TaxComponent comp2 = mock(TaxComponent.class);
-        TaxGroup taxGroup = mock(TaxGroup.class);
-
         ChargeTaxApplicationService taxService = mock(ChargeTaxApplicationService.class);
         when(taxService.computeTax(any(), any(), any(), anyInt())).thenReturn(
                 Map.of(comp1, new BigDecimal("10.000000"), comp2, new BigDecimal("5.000000")), Map.of(comp1, new BigDecimal("20.000000")));
 
         LoanChargeService service = buildService(taxService);
-        Charge charge = flatCharge(taxGroup);
+        Charge charge = flatCharge(TAX_GROUP_ID);
         LoanCharge loanCharge = loanCharge(charge, new BigDecimal("100.00"), null);
 
         service.populateDerivedFields(loanCharge, BigDecimal.ZERO, new BigDecimal("100.00"), null, BigDecimal.ZERO);
@@ -227,9 +214,9 @@ class LoanChargeServiceTaxTest {
         assertThat(loanCharge.getTaxDetails().get(0).getTaxComponent()).isEqualTo(comp1);
     }
 
-    private Charge flatCharge(TaxGroup taxGroup) {
+    private Charge flatCharge(Long taxGroupId) {
         Charge charge = mock(Charge.class);
-        when(charge.getTaxGroup()).thenReturn(taxGroup);
+        when(charge.getTaxGroupId()).thenReturn(taxGroupId);
         return charge;
     }
 

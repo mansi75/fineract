@@ -55,7 +55,6 @@ import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
 import org.apache.fineract.portfolio.paymenttype.data.PaymentTypeData;
 import org.apache.fineract.portfolio.paymenttype.domain.PaymentType;
 import org.apache.fineract.portfolio.tax.data.TaxGroupData;
-import org.apache.fineract.portfolio.tax.domain.TaxGroup;
 
 @Entity
 @Table(name = "m_charge", uniqueConstraints = { @UniqueConstraint(columnNames = { "name" }, name = "name") })
@@ -156,11 +155,10 @@ public class Charge extends AbstractPersistableCustom<Long> {
 
     @Getter
     @Setter
-    @ManyToOne
-    @JoinColumn(name = "tax_group_id")
-    private TaxGroup taxGroup;
+    @Column(name = "tax_group_id")
+    private Long taxGroupId;
 
-    public static Charge fromJson(final JsonCommand command, final GLAccount account, final TaxGroup taxGroup,
+    public static Charge fromJson(final JsonCommand command, final GLAccount account, final Long taxGroupId,
             final PaymentType paymentType) {
 
         final String name = command.stringValueOfParameterNamed("name");
@@ -204,7 +202,7 @@ public class Charge extends AbstractPersistableCustom<Long> {
 
         return new Charge(name, amount, currencyCode, chargeAppliesTo, chargeTimeType, chargeCalculationType, penalty, active, paymentMode,
                 feeOnMonthDay, feeInterval, minCap, maxCap, feeFrequency, enableFreeWithdrawalCharge, freeWithdrawalFrequency,
-                restartCountFrequency, countFrequencyType, account, taxGroup, enablePaymentType, paymentType);
+                restartCountFrequency, countFrequencyType, account, taxGroupId, enablePaymentType, paymentType);
     }
 
     protected Charge() {}
@@ -214,7 +212,7 @@ public class Charge extends AbstractPersistableCustom<Long> {
             final ChargePaymentMode paymentMode, final MonthDay feeOnMonthDay, final Integer feeInterval, final BigDecimal minCap,
             final BigDecimal maxCap, final Integer feeFrequency, final boolean enableFreeWithdrawalCharge,
             final Integer freeWithdrawalFrequency, final Integer restartFrequency, final PeriodFrequencyType restartFrequencyEnum,
-            final GLAccount account, final TaxGroup taxGroup, final boolean enablePaymentType, final PaymentType paymentType) {
+            final GLAccount account, final Long taxGroupId, final boolean enablePaymentType, final PaymentType paymentType) {
         this.name = name;
         this.amount = amount;
         this.currencyCode = currencyCode;
@@ -224,7 +222,7 @@ public class Charge extends AbstractPersistableCustom<Long> {
         this.penalty = penalty;
         this.active = active;
         this.account = account;
-        this.taxGroup = taxGroup;
+        this.taxGroupId = taxGroupId;
         this.chargePaymentMode = paymentMode == null ? null : paymentMode.getValue();
 
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
@@ -614,10 +612,10 @@ public class Charge extends AbstractPersistableCustom<Long> {
             actualChanges.put(ChargesApiConstants.glAccountIdParamName, newValue);
         }
 
-        if (command.isChangeInLongParameterNamed(ChargesApiConstants.taxGroupIdParamName, getTaxGroupId())) {
+        if (command.isChangeInLongParameterNamed(ChargesApiConstants.taxGroupIdParamName, this.taxGroupId)) {
             final Long newValue = command.longValueOfParameterNamed(ChargesApiConstants.taxGroupIdParamName);
             actualChanges.put(ChargesApiConstants.taxGroupIdParamName, newValue);
-            if (taxGroup != null) {
+            if (this.taxGroupId != null) {
                 baseDataValidator.reset().parameter(ChargesApiConstants.taxGroupIdParamName).failWithCode("modification.not.supported");
             }
         }
@@ -653,8 +651,8 @@ public class Charge extends AbstractPersistableCustom<Long> {
             accountData = new GLAccountData().setId(account.getId()).setName(account.getName()).setGlCode(account.getGlCode());
         }
         TaxGroupData taxGroupData = null;
-        if (this.taxGroup != null) {
-            taxGroupData = TaxGroupData.lookup(taxGroup.getId(), taxGroup.getName());
+        if (this.taxGroupId != null) {
+            taxGroupData = TaxGroupData.lookup(this.taxGroupId, null);
         }
 
         PaymentTypeData paymentTypeData = null;
@@ -709,14 +707,6 @@ public class Charge extends AbstractPersistableCustom<Long> {
         return incomeAccountId;
     }
 
-    private Long getTaxGroupId() {
-        Long taxGroupId = null;
-        if (this.taxGroup != null) {
-            taxGroupId = this.taxGroup.getId();
-        }
-        return taxGroupId;
-    }
-
     public boolean isDisbursementCharge() {
         return ChargeTimeType.fromInt(this.chargeTimeType).equals(ChargeTimeType.DISBURSEMENT)
                 || ChargeTimeType.fromInt(this.chargeTimeType).equals(ChargeTimeType.TRANCHE_DISBURSEMENT);
@@ -738,13 +728,13 @@ public class Charge extends AbstractPersistableCustom<Long> {
                 && Objects.equals(feeOnMonth, other.feeOnMonth) && penalty == other.penalty && active == other.active
                 && deleted == other.deleted && Objects.equals(minCap, other.minCap) && Objects.equals(maxCap, other.maxCap)
                 && Objects.equals(feeFrequency, other.feeFrequency) && Objects.equals(account, other.account)
-                && Objects.equals(taxGroup, other.taxGroup);
+                && Objects.equals(taxGroupId, other.taxGroupId);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(name, amount, currencyCode, chargeAppliesTo, chargeTimeType, chargeCalculation, chargePaymentMode, feeOnDay,
-                feeInterval, feeOnMonth, penalty, active, deleted, minCap, maxCap, feeFrequency, account, taxGroup);
+                feeInterval, feeOnMonth, penalty, active, deleted, minCap, maxCap, feeFrequency, account, taxGroupId);
     }
 
 }

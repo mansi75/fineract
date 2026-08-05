@@ -48,6 +48,10 @@ configurations {
 
 apply from: 'dependencies.gradle'
 
+test {
+    systemProperty 'charge.boundary.report', System.getProperty('charge.boundary.report', 'false')
+}
+
 // Configuration for the modernizer plugin
 // https://github.com/andygoossens/gradle-modernizer-plugin
 modernizer {

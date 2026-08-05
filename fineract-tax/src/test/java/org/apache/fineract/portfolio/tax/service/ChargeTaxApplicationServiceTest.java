@@ -34,6 +34,7 @@ import org.apache.fineract.organisation.monetary.domain.MoneyHelper;
 import org.apache.fineract.portfolio.tax.domain.TaxComponent;
 import org.apache.fineract.portfolio.tax.domain.TaxGroup;
 import org.apache.fineract.portfolio.tax.domain.TaxGroupMappings;
+import org.apache.fineract.portfolio.tax.domain.TaxGroupRepositoryWrapper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -47,9 +48,13 @@ import org.mockito.MockedStatic;
  */
 class ChargeTaxApplicationServiceTest {
 
+    private static final Long TAX_GROUP_ID = 1L;
+
     private static MockedStatic<MoneyHelper> moneyHelperMock;
 
-    private final ChargeTaxApplicationService service = new ChargeTaxApplicationServiceImpl();
+    private final TaxGroupRepositoryWrapper taxGroupRepository = mock(TaxGroupRepositoryWrapper.class);
+
+    private final ChargeTaxApplicationService service = new ChargeTaxApplicationServiceImpl(taxGroupRepository);
 
     private final LocalDate actualDate = LocalDate.now(ZoneId.systemDefault());
 
@@ -65,7 +70,7 @@ class ChargeTaxApplicationServiceTest {
     }
 
     @Test
-    void computeTax_returnsEmptyMap_whenTaxGroupIsNull() {
+    void computeTax_returnsEmptyMap_whenTaxGroupIdIsNull() {
         Map<TaxComponent, BigDecimal> result = service.computeTax(null, new BigDecimal("100.00"), actualDate, 6);
 
         assertThat(result).isEmpty();
@@ -73,18 +78,14 @@ class ChargeTaxApplicationServiceTest {
 
     @Test
     void computeTax_returnsEmptyMap_whenBaseAmountIsNull() {
-        TaxGroup taxGroup = mock(TaxGroup.class);
-
-        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroup, null, actualDate, 6);
+        Map<TaxComponent, BigDecimal> result = service.computeTax(TAX_GROUP_ID, null, actualDate, 6);
 
         assertThat(result).isEmpty();
     }
 
     @Test
     void computeTax_returnsEmptyMap_whenBaseAmountIsZero() {
-        TaxGroup taxGroup = mock(TaxGroup.class);
-
-        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroup, BigDecimal.ZERO, actualDate, 6);
+        Map<TaxComponent, BigDecimal> result = service.computeTax(TAX_GROUP_ID, BigDecimal.ZERO, actualDate, 6);
 
         assertThat(result).isEmpty();
     }
@@ -96,7 +97,7 @@ class ChargeTaxApplicationServiceTest {
         TaxComponent component = taxComponentWithRate(new BigDecimal("16"), effectiveDate.minusDays(1));
         TaxGroup taxGroup = taxGroupWith(component, effectiveDate.minusDays(1), null);
 
-        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroup, new BigDecimal("1000.00"), effectiveDate, 6);
+        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroupId(taxGroup), new BigDecimal("1000.00"), effectiveDate, 6);
 
         assertThat(result).hasSize(1);
         BigDecimal tax = result.get(component);
@@ -111,7 +112,7 @@ class ChargeTaxApplicationServiceTest {
         TaxComponent component = taxComponentWithRate(new BigDecimal("10"), effectiveDate.minusDays(1));
         TaxGroup taxGroup = taxGroupWith(component, effectiveDate.minusDays(1), null);
 
-        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroup, new BigDecimal("50.00"), effectiveDate, 6);
+        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroupId(taxGroup), new BigDecimal("50.00"), effectiveDate, 6);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(component).setScale(2, RoundingMode.HALF_EVEN)).isEqualByComparingTo(new BigDecimal("5.00"));
@@ -131,7 +132,7 @@ class ChargeTaxApplicationServiceTest {
         TaxGroup taxGroup = mock(TaxGroup.class);
         when(taxGroup.getTaxGroupMappings()).thenReturn(mappings);
 
-        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroup, new BigDecimal("200.00"), effectiveDate, 6);
+        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroupId(taxGroup), new BigDecimal("200.00"), effectiveDate, 6);
 
         assertThat(result).hasSize(2);
         assertThat(result.get(comp1).setScale(2, RoundingMode.HALF_EVEN)).isEqualByComparingTo(new BigDecimal("20.00"));
@@ -151,7 +152,7 @@ class ChargeTaxApplicationServiceTest {
         TaxGroup taxGroup = mock(TaxGroup.class);
         when(taxGroup.getTaxGroupMappings()).thenReturn(mappings);
 
-        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroup, new BigDecimal("200.00"), effectiveDate, 6);
+        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroupId(taxGroup), new BigDecimal("200.00"), effectiveDate, 6);
 
         BigDecimal total = TaxUtils.totalTaxAmount(result);
         assertThat(total.setScale(2, RoundingMode.HALF_EVEN)).isEqualByComparingTo(new BigDecimal("30.00"));
@@ -168,7 +169,7 @@ class ChargeTaxApplicationServiceTest {
         TaxGroup taxGroup = mock(TaxGroup.class);
         when(taxGroup.getTaxGroupMappings()).thenReturn(Set.of(expiredMapping));
 
-        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroup, new BigDecimal("500.00"), effectiveDate, 6);
+        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroupId(taxGroup), new BigDecimal("500.00"), effectiveDate, 6);
 
         assertThat(result).isEmpty();
     }
@@ -186,7 +187,7 @@ class ChargeTaxApplicationServiceTest {
         TaxGroup taxGroup = mock(TaxGroup.class);
         when(taxGroup.getTaxGroupMappings()).thenReturn(Set.of(activeMapping, expiredMapping));
 
-        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroup, new BigDecimal("100.00"), effectiveDate, 6);
+        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroupId(taxGroup), new BigDecimal("100.00"), effectiveDate, 6);
 
         assertThat(result).hasSize(1).containsKey(activeComp);
         assertThat(result.get(activeComp).setScale(2, RoundingMode.HALF_EVEN)).isEqualByComparingTo(new BigDecimal("10.00"));
@@ -202,7 +203,7 @@ class ChargeTaxApplicationServiceTest {
         TaxGroup taxGroup = mock(TaxGroup.class);
         when(taxGroup.getTaxGroupMappings()).thenReturn(Set.of(futureMapping));
 
-        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroup, new BigDecimal("1000.00"), effectiveDate, 6);
+        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroupId(taxGroup), new BigDecimal("1000.00"), effectiveDate, 6);
 
         assertThat(result).isEmpty();
     }
@@ -213,7 +214,7 @@ class ChargeTaxApplicationServiceTest {
         TaxComponent component = taxComponentWithRate(new BigDecimal("7"), effectiveDate.minusDays(1));
         TaxGroup taxGroup = taxGroupWith(component, effectiveDate.minusDays(1), null);
 
-        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroup, new BigDecimal("333.33"), effectiveDate, 2);
+        Map<TaxComponent, BigDecimal> result = service.computeTax(taxGroupId(taxGroup), new BigDecimal("333.33"), effectiveDate, 2);
 
         assertThat(result.get(component).scale()).isEqualTo(2);
     }
@@ -235,6 +236,11 @@ class ChargeTaxApplicationServiceTest {
             return afterStart && beforeEnd;
         });
         return mapping;
+    }
+
+    private Long taxGroupId(TaxGroup taxGroup) {
+        when(taxGroupRepository.findOneWithNotFoundDetection(TAX_GROUP_ID)).thenReturn(taxGroup);
+        return TAX_GROUP_ID;
     }
 
     private TaxGroup taxGroupWith(TaxComponent component, LocalDate startDate, LocalDate endDate) {

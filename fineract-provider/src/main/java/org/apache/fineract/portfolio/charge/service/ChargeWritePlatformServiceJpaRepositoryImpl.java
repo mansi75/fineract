@@ -47,7 +47,6 @@ import org.apache.fineract.portfolio.paymentdetail.PaymentDetailConstants;
 import org.apache.fineract.portfolio.paymenttype.domain.PaymentType;
 import org.apache.fineract.portfolio.paymenttype.domain.PaymentTypeRepository;
 import org.apache.fineract.portfolio.paymenttype.exception.PaymentTypeNotFoundException;
-import org.apache.fineract.portfolio.tax.domain.TaxGroup;
 import org.apache.fineract.portfolio.tax.domain.TaxGroupRepositoryWrapper;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -86,10 +85,7 @@ public class ChargeWritePlatformServiceJpaRepositoryImpl implements ChargeWriteP
             }
 
             final Long taxGroupId = command.longValueOfParameterNamed(ChargesApiConstants.taxGroupIdParamName);
-            TaxGroup taxGroup = null;
-            if (taxGroupId != null) {
-                taxGroup = this.taxGroupRepository.findOneWithNotFoundDetection(taxGroupId);
-            }
+            validateTaxGroupExists(taxGroupId);
 
             final boolean enablePaymentType = command.booleanPrimitiveValueOfParameterNamed("enablePaymentType");
             PaymentType paymentType = null;
@@ -100,7 +96,7 @@ public class ChargeWritePlatformServiceJpaRepositoryImpl implements ChargeWriteP
                 }
             }
 
-            final Charge charge = Charge.fromJson(command, glAccount, taxGroup, paymentType);
+            final Charge charge = Charge.fromJson(command, glAccount, taxGroupId, paymentType);
             this.chargeRepository.saveAndFlush(charge);
 
             // check if the office specific products are enabled. If yes, then
@@ -189,11 +185,8 @@ public class ChargeWritePlatformServiceJpaRepositoryImpl implements ChargeWriteP
 
             if (changes.containsKey(ChargesApiConstants.taxGroupIdParamName)) {
                 final Long newValue = command.longValueOfParameterNamed(ChargesApiConstants.taxGroupIdParamName);
-                TaxGroup taxGroup = null;
-                if (newValue != null) {
-                    taxGroup = this.taxGroupRepository.findOneWithNotFoundDetection(newValue);
-                }
-                chargeForUpdate.setTaxGroup(taxGroup);
+                validateTaxGroupExists(newValue);
+                chargeForUpdate.setTaxGroupId(newValue);
             }
 
             if (!changes.isEmpty()) {
@@ -263,6 +256,12 @@ public class ChargeWritePlatformServiceJpaRepositoryImpl implements ChargeWriteP
 
     private PaymentType findPaymentTypeWithNotFoundDetection(final Long paymentTypeId) {
         return this.paymentTypeRepository.findById(paymentTypeId).orElseThrow(() -> new PaymentTypeNotFoundException(paymentTypeId));
+    }
+
+    private void validateTaxGroupExists(final Long taxGroupId) {
+        if (taxGroupId != null) {
+            this.taxGroupRepository.findOneWithNotFoundDetection(taxGroupId);
+        }
     }
 
     private boolean isAnyLoansAssociateWithThisCharge(final Long chargeId) {

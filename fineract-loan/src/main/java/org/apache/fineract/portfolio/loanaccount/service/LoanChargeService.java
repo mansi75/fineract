@@ -59,7 +59,6 @@ import org.apache.fineract.portfolio.loanaccount.domain.transactionprocessor.Mon
 import org.apache.fineract.portfolio.loanaccount.domain.transactionprocessor.TransactionCtx;
 import org.apache.fineract.portfolio.loanaccount.serialization.LoanChargeValidator;
 import org.apache.fineract.portfolio.tax.domain.TaxComponent;
-import org.apache.fineract.portfolio.tax.domain.TaxGroup;
 import org.apache.fineract.portfolio.tax.service.ChargeTaxApplicationService;
 import org.apache.fineract.portfolio.tax.service.TaxUtils;
 
@@ -463,13 +462,14 @@ public class LoanChargeService {
     }
 
     private void applyTaxIfConfigured(final LoanCharge loanCharge) {
-        TaxGroup taxGroup = loanCharge.getCharge().getTaxGroup();
-        if (taxGroup == null || loanCharge.getAmount() == null) {
+        Long taxGroupId = loanCharge.getCharge().getTaxGroupId();
+        if (taxGroupId == null || loanCharge.getAmount() == null) {
             return;
         }
         LocalDate effectiveDate = loanCharge.getSubmittedOnDate() != null ? loanCharge.getSubmittedOnDate()
                 : DateUtils.getBusinessLocalDate();
-        Map<TaxComponent, BigDecimal> taxSplit = chargeTaxApplicationService.computeTax(taxGroup, loanCharge.getAmount(), effectiveDate, 6);
+        Map<TaxComponent, BigDecimal> taxSplit = chargeTaxApplicationService.computeTax(taxGroupId, loanCharge.getAmount(), effectiveDate,
+                6);
         BigDecimal totalTax = TaxUtils.totalTaxAmount(taxSplit);
         if (totalTax.compareTo(BigDecimal.ZERO) == 0) {
             return;
