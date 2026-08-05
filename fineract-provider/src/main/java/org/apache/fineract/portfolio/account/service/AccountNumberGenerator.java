@@ -39,7 +39,6 @@ import org.apache.fineract.portfolio.loanaccount.domain.Loan;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanRepository;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccountRepository;
-import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccount;
 import org.apache.fineract.portfolio.workingcapitalloan.domain.WorkingCapitalLoan;
 import org.apache.fineract.portfolio.workingcapitalloan.repository.WorkingCapitalLoanRepository;
 import org.springframework.stereotype.Component;
@@ -98,10 +97,10 @@ public class AccountNumberGenerator implements AccountNumberGeneratorService {
         return generateAccountNumber(propertyMap, accountNumberFormat);
     }
 
-    public String generate(ShareAccount shareaccount, AccountNumberFormat accountNumberFormat) {
+    public String generateForShareAccount(Long shareAccountId, String shareProductShortName, AccountNumberFormat accountNumberFormat) {
         Map<String, String> propertyMap = new HashMap<>();
-        propertyMap.put(ID, shareaccount.getId().toString());
-        propertyMap.put(SHARE_PRODUCT_SHORT_NAME, shareaccount.getShareProduct().getShortName());
+        propertyMap.put(ID, shareAccountId.toString());
+        propertyMap.put(SHARE_PRODUCT_SHORT_NAME, shareProductShortName);
         propertyMap.put(ENTITY_TYPE, "shareAccount");
         return generateAccountNumber(propertyMap, accountNumberFormat);
     }
@@ -122,8 +121,8 @@ public class AccountNumberGenerator implements AccountNumberGeneratorService {
             case CLIENT -> generate((Client) entity, format);
             case LOAN -> generate((Loan) entity, format);
             case SAVINGS -> generate((SavingsAccount) entity, format);
-            case SHARES -> generate((ShareAccount) entity, format);
             case WORKING_CAPITAL_LOAN -> generate((WorkingCapitalLoan) entity, format);
+            case SHARES -> throw new UnsupportedOperationException("Use ShareAccountNumberService for " + type);
             case CENTER, GROUP ->
                 throw new UnsupportedOperationException("Use generateCenterAccountNumber / generateGroupAccountNumber for " + type);
         };

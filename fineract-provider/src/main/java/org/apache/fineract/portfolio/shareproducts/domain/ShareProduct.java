@@ -430,4 +430,8 @@ public class ShareProduct extends AbstractAuditableCustom {
     public Long getDefaultClientShares() {
         return this.nominalShares;
     }
+
+    public Set<ShareProductMarketPrice> getMarketPrice() {
+        return this.marketPrice;
+    }
 }

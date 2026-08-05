@@ -584,7 +584,7 @@ public class JournalEntryWritePlatformServiceJpaRepositoryImpl implements Journa
     }
 
     @Override
-    public void revertShareAccountJournalEntries(final ArrayList<Long> transactionIds, final LocalDate transactionDate) {
+    public void revertShareAccountJournalEntries(final List<Long> transactionIds, final LocalDate transactionDate) {
         for (Long shareTransactionId : transactionIds) {
             String transactionId = AccountingProcessorHelper.SHARE_TRANSACTION_IDENTIFIER + shareTransactionId;
             List<JournalEntry> journalEntries = this.glJournalEntryRepository.findJournalEntries(transactionId,

@@ -36,33 +36,27 @@ import org.apache.fineract.infrastructure.core.service.Page;
 import org.apache.fineract.infrastructure.core.service.PaginationHelper;
 import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
-import org.apache.fineract.portfolio.accountdetails.data.ShareAccountSummaryData;
-import org.apache.fineract.portfolio.accounts.constants.ShareAccountApiConstants;
 import org.apache.fineract.portfolio.accounts.data.AccountData;
-import org.apache.fineract.portfolio.accounts.exceptions.ShareAccountNotFoundException;
 import org.apache.fineract.portfolio.charge.data.ChargeData;
-import org.apache.fineract.portfolio.charge.service.ChargeReadPlatformService;
-import org.apache.fineract.portfolio.charge.util.ConvertChargeDataToSpecificChargeData;
 import org.apache.fineract.portfolio.client.data.ClientData;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
-import org.apache.fineract.portfolio.products.constants.ProductsApiConstants;
 import org.apache.fineract.portfolio.products.data.ProductData;
-import org.apache.fineract.portfolio.products.service.ShareProductReadPlatformService;
-import org.apache.fineract.portfolio.savings.DepositAccountType;
 import org.apache.fineract.portfolio.savings.data.SavingsAccountData;
-import org.apache.fineract.portfolio.savings.service.SavingsAccountReadPlatformService;
+import org.apache.fineract.portfolio.shareaccounts.constants.ShareAccountApiConstants;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountChargeReadService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountProductService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountSavingsService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareProductDetailsData;
 import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountApplicationTimelineData;
 import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountChargeData;
 import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountData;
 import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountDividendData;
 import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountStatusEnumData;
+import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountSummaryData;
 import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountTransactionData;
 import org.apache.fineract.portfolio.shareaccounts.domain.PurchasedSharesStatusType;
 import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountStatusType;
-import org.apache.fineract.portfolio.shareproducts.data.ShareProductData;
-import org.apache.fineract.portfolio.shareproducts.data.ShareProductMarketPriceData;
-import org.apache.fineract.portfolio.shareproducts.service.ShareProductDropdownReadPlatformService;
-import org.springframework.context.ApplicationContext;
+import org.apache.fineract.portfolio.shareaccounts.exceptions.ShareAccountNotFoundException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -70,10 +64,9 @@ import org.springframework.jdbc.core.RowMapper;
 @RequiredArgsConstructor
 public class ShareAccountReadPlatformServiceImpl implements ShareAccountReadPlatformService {
 
-    private final ApplicationContext applicationContext;
-    private final ChargeReadPlatformService chargeReadPlatformService;
-    private final ShareProductDropdownReadPlatformService shareProductDropdownReadPlatformService;
-    private final SavingsAccountReadPlatformService savingsAccountReadPlatformService;
+    private final ShareAccountChargeReadService shareAccountChargeReadService;
+    private final ShareAccountProductService shareAccountProductService;
+    private final ShareAccountSavingsService shareAccountSavingsService;
     private final ClientReadPlatformService clientReadPlatformService;
     private final ShareAccountChargeReadPlatformService shareAccountChargeReadPlatformService;
     private final PurchasedSharesReadPlatformService purchasedSharesReadPlatformService;
@@ -85,45 +78,28 @@ public class ShareAccountReadPlatformServiceImpl implements ShareAccountReadPlat
     @Override
     public ShareAccountData retrieveTemplate(Long clientId, Long productId) {
         ShareAccountData toReturn = null;
-        String serviceName = "share" + ProductsApiConstants.READPLATFORM_NAME;
-        ShareProductReadPlatformService service = (ShareProductReadPlatformService) this.applicationContext.getBean(serviceName);
         ClientData client = this.clientReadPlatformService.retrieveOne(clientId);
 
         if (productId != null) {
-            final ShareProductData productData = (ShareProductData) service.retrieveOne(productId, false);
-            final BigDecimal marketPrice = deriveMarketPrice(productData);
-            final Collection<ChargeData> productCharges = this.chargeReadPlatformService.retrieveShareProductCharges(productId);
+            final ShareProductDetailsData productData = this.shareAccountProductService.findProduct(productId);
+            final BigDecimal marketPrice = productData.deriveMarketPrice(DateUtils.getBusinessLocalDate());
+            final Collection<ChargeData> productCharges = this.shareAccountChargeReadService.retrieveShareProductCharges(productId);
             final Collection<ShareAccountChargeData> charges = convertChargesToShareAccountCharges(productCharges);
-            final Collection<EnumOptionData> lockinPeriodFrequencyTypeOptions = this.shareProductDropdownReadPlatformService
+            final Collection<EnumOptionData> lockinPeriodFrequencyTypeOptions = this.shareAccountProductService
                     .retrieveLockinPeriodFrequencyTypeOptions();
-            final Collection<EnumOptionData> minimumActivePeriodFrequencyTypeOptions = this.shareProductDropdownReadPlatformService
+            final Collection<EnumOptionData> minimumActivePeriodFrequencyTypeOptions = this.shareAccountProductService
                     .retrieveMinimumActivePeriodFrequencyTypeOptions();
-            final Collection<SavingsAccountData> clientSavingsAccounts = this.savingsAccountReadPlatformService
-                    .retrieveActiveForLookup(clientId, DepositAccountType.SAVINGS_DEPOSIT, productData.getCurrency().getCode());
-            toReturn = new ShareAccountData(client.getId(), client.getDisplayName(), productData.getCurrency(), charges, marketPrice,
+            final Collection<SavingsAccountData> clientSavingsAccounts = this.shareAccountSavingsService
+                    .retrieveActiveSavingsDepositsForLookup(clientId, productData.currency().getCode());
+            toReturn = new ShareAccountData(client.getId(), client.getDisplayName(), productData.currency(), charges, marketPrice,
                     minimumActivePeriodFrequencyTypeOptions, lockinPeriodFrequencyTypeOptions, clientSavingsAccounts,
-                    productData.getNominalShares());
+                    productData.nominalShares());
         } else {
-            Collection<ProductData> productOptions = service.retrieveAllForLookup();
-            final Collection<ChargeData> chargeOptions = this.chargeReadPlatformService.retrieveSharesApplicableCharges();
+            Collection<ProductData> productOptions = this.shareAccountProductService.retrieveAllProductsForLookup();
+            final Collection<ChargeData> chargeOptions = this.shareAccountChargeReadService.retrieveSharesApplicableCharges();
             toReturn = new ShareAccountData(client.getId(), client.getDisplayName(), productOptions, chargeOptions);
         }
         return toReturn;
-    }
-
-    private BigDecimal deriveMarketPrice(final ShareProductData shareProductData) {
-        BigDecimal marketValue = shareProductData.getUnitPrice();
-        Collection<ShareProductMarketPriceData> marketDataSet = shareProductData.getMarketPrice();
-        if (marketDataSet != null && !marketDataSet.isEmpty()) {
-            LocalDate currentDate = DateUtils.getBusinessLocalDate();
-            for (ShareProductMarketPriceData data : marketDataSet) {
-                LocalDate fromDate = data.getFromDate();
-                if (DateUtils.isBefore(fromDate, currentDate)) {
-                    marketValue = data.getShareValue();
-                }
-            }
-        }
-        return marketValue;
     }
 
     @Override
@@ -134,23 +110,21 @@ public class ShareAccountReadPlatformServiceImpl implements ShareAccountReadPlat
         ShareAccountMapper mapper = new ShareAccountMapper(charges, purchasedShares);
         String query = "select " + mapper.schema() + "where sa.id=?";
         ShareAccountData data = (ShareAccountData) this.jdbcTemplate.queryForObject(query, mapper, id); // NOSONAR
-        String serviceName = "share" + ProductsApiConstants.READPLATFORM_NAME;
-        ShareProductReadPlatformService service = (ShareProductReadPlatformService) this.applicationContext.getBean(serviceName);
-        final ShareProductData productData = (ShareProductData) service.retrieveOne(data.getProductId(), false);
-        final BigDecimal currentMarketPrice = deriveMarketPrice(productData);
+        final ShareProductDetailsData productData = this.shareAccountProductService.findProduct(data.getProductId());
+        final BigDecimal currentMarketPrice = productData.deriveMarketPrice(DateUtils.getBusinessLocalDate());
         data.setCurrentMarketPrice(currentMarketPrice);
         if (!includeTemplate) {
             Collection<ShareAccountDividendData> dividends = this.retrieveAssociatedDividends(id);
             data.setDividends(dividends);
         }
         if (includeTemplate) {
-            final Collection<EnumOptionData> lockinPeriodFrequencyTypeOptions = this.shareProductDropdownReadPlatformService
+            final Collection<EnumOptionData> lockinPeriodFrequencyTypeOptions = this.shareAccountProductService
                     .retrieveLockinPeriodFrequencyTypeOptions();
             final Collection<EnumOptionData> minimumActivePeriodFrequencyTypeOptions = lockinPeriodFrequencyTypeOptions;
-            final Collection<SavingsAccountData> clientSavingsAccounts = this.savingsAccountReadPlatformService
-                    .retrieveActiveForLookup(data.getClientId(), DepositAccountType.SAVINGS_DEPOSIT, productData.getCurrency().getCode());
-            Collection<ProductData> productOptions = service.retrieveAllForLookup();
-            final Collection<ChargeData> chargeOptions = this.chargeReadPlatformService.retrieveSharesApplicableCharges();
+            final Collection<SavingsAccountData> clientSavingsAccounts = this.shareAccountSavingsService
+                    .retrieveActiveSavingsDepositsForLookup(data.getClientId(), productData.currency().getCode());
+            Collection<ProductData> productOptions = this.shareAccountProductService.retrieveAllProductsForLookup();
+            final Collection<ChargeData> chargeOptions = this.shareAccountChargeReadService.retrieveSharesApplicableCharges();
             data = ShareAccountData.template(data, productOptions, chargeOptions, clientSavingsAccounts, lockinPeriodFrequencyTypeOptions,
                     minimumActivePeriodFrequencyTypeOptions);
         }
@@ -224,7 +198,7 @@ public class ShareAccountReadPlatformServiceImpl implements ShareAccountReadPlat
     public Collection<ShareAccountChargeData> convertChargesToShareAccountCharges(Collection<ChargeData> productCharges) {
         final Collection<ShareAccountChargeData> savingsCharges = new ArrayList<>();
         for (final ChargeData chargeData : productCharges) {
-            final ShareAccountChargeData savingsCharge = ConvertChargeDataToSpecificChargeData.toShareAccountChargeData(chargeData);
+            final ShareAccountChargeData savingsCharge = ShareAccountChargeData.template(chargeData);
             savingsCharges.add(savingsCharge);
         }
         return savingsCharges;

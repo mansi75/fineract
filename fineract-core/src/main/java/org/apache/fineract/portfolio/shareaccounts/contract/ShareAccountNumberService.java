@@ -16,20 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.infrastructure.event.business.domain.share;
+package org.apache.fineract.portfolio.shareaccounts.contract;
 
-import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccount;
+/**
+ * Generates the account number of a share account from the configured account number format. Declared here so share
+ * accounts never compile against the account number format feature, which owns the implementation.
+ */
+public interface ShareAccountNumberService {
 
-public class ShareAccountApproveBusinessEvent extends ShareAccountBusinessEvent {
-
-    private static final String TYPE = "ShareAccountApproveBusinessEvent";
-
-    public ShareAccountApproveBusinessEvent(ShareAccount value) {
-        super(value);
-    }
-
-    @Override
-    public String getType() {
-        return TYPE;
-    }
+    String generateAccountNumber(Long shareAccountId, String shareProductShortName);
 }

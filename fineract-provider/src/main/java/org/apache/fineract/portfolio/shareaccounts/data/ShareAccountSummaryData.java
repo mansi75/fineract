@@ -16,13 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.portfolio.accountdetails.data;
+package org.apache.fineract.portfolio.shareaccounts.data;
 
 import java.io.Serializable;
 import lombok.Getter;
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
-import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountApplicationTimelineData;
-import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountStatusEnumData;
 
 @Getter
 public class ShareAccountSummaryData implements Serializable {

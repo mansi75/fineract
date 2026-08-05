@@ -25,6 +25,11 @@ dependencies {
     }
 
     implementation(project(path: ':fineract-core'))
+    // Spring Modulith is only used to describe/verify feature boundaries: the @ApplicationModule marker is needed to
+    // compile package-info, the module model itself is only built by the boundary tests. Neither ends up on the
+    // production runtime classpath.
+    compileOnly 'org.springframework.modulith:spring-modulith-api'
+    testImplementation 'org.springframework.modulith:spring-modulith-core'
     implementation(project(path: ':fineract-cob'))
     implementation(project(path: ':fineract-command'))
     implementation(project(path: ':fineract-command-audit'))

@@ -19,6 +19,7 @@
 package org.apache.fineract.portfolio.accountdetails.data;
 
 import java.util.Collection;
+import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountSummaryData;
 
 /**
  * Immutable data object representing a summary of various accounts.

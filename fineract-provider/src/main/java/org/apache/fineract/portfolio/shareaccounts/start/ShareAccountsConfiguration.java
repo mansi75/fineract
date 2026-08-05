@@ -18,23 +18,21 @@
  */
 package org.apache.fineract.portfolio.shareaccounts.start;
 
-import org.apache.fineract.accounting.journalentry.service.JournalEntryWritePlatformService;
-import org.apache.fineract.infrastructure.accountnumberformat.domain.AccountNumberFormatRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.apache.fineract.infrastructure.core.service.PaginationHelper;
 import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.infrastructure.event.business.service.BusinessEventNotifierService;
 import org.apache.fineract.infrastructure.security.utils.ColumnValidator;
-import org.apache.fineract.portfolio.account.service.AccountNumberGenerator;
 import org.apache.fineract.portfolio.accounts.constants.AccountsApiConstants;
 import org.apache.fineract.portfolio.accounts.service.AccountsCommandsService;
-import org.apache.fineract.portfolio.charge.service.ChargeReadPlatformService;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
-import org.apache.fineract.portfolio.note.domain.NoteRepository;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccountAssembler;
-import org.apache.fineract.portfolio.savings.service.SavingsAccountDomainService;
-import org.apache.fineract.portfolio.savings.service.SavingsAccountReadPlatformService;
-import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountDividendRepository;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountChargeReadService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountJournalEntryService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountNoteService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountNumberService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountProductService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountSavingsService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareDividendDetailsService;
 import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountRepositoryWrapper;
 import org.apache.fineract.portfolio.shareaccounts.serialization.ShareAccountDataSerializer;
 import org.apache.fineract.portfolio.shareaccounts.service.PurchasedSharesReadPlatformService;
@@ -50,10 +48,7 @@ import org.apache.fineract.portfolio.shareaccounts.service.ShareAccountSchedular
 import org.apache.fineract.portfolio.shareaccounts.service.ShareAccountSchedularServiceImpl;
 import org.apache.fineract.portfolio.shareaccounts.service.ShareAccountWritePlatformService;
 import org.apache.fineract.portfolio.shareaccounts.service.ShareAccountWritePlatformServiceJpaRepositoryImpl;
-import org.apache.fineract.portfolio.shareproducts.domain.ShareProductRepositoryWrapper;
-import org.apache.fineract.portfolio.shareproducts.service.ShareProductDropdownReadPlatformService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -90,34 +85,32 @@ public class ShareAccountsConfiguration {
 
     @Bean(value = "share" + AccountsApiConstants.READPLATFORM_NAME)
     @ConditionalOnMissingBean(ShareAccountReadPlatformService.class)
-    public ShareAccountReadPlatformService shareAccountReadPlatformService(ApplicationContext applicationContext,
-            ChargeReadPlatformService chargeReadPlatformService,
-            ShareProductDropdownReadPlatformService shareProductDropdownReadPlatformService,
-            SavingsAccountReadPlatformService savingsAccountReadPlatformService, ClientReadPlatformService clientReadPlatformService,
+    public ShareAccountReadPlatformService shareAccountReadPlatformService(ShareAccountChargeReadService shareAccountChargeReadService,
+            ShareAccountProductService shareAccountProductService, ShareAccountSavingsService shareAccountSavingsService,
+            ClientReadPlatformService clientReadPlatformService,
             ShareAccountChargeReadPlatformService shareAccountChargeReadPlatformService,
             PurchasedSharesReadPlatformService purchasedSharesReadPlatformService, JdbcTemplate jdbcTemplate,
             PaginationHelper paginationHelper, DatabaseSpecificSQLGenerator sqlGenerator) {
-        return new ShareAccountReadPlatformServiceImpl(applicationContext, chargeReadPlatformService,
-                shareProductDropdownReadPlatformService, savingsAccountReadPlatformService, clientReadPlatformService,
-                shareAccountChargeReadPlatformService, purchasedSharesReadPlatformService, jdbcTemplate, paginationHelper, sqlGenerator);
+        return new ShareAccountReadPlatformServiceImpl(shareAccountChargeReadService, shareAccountProductService,
+                shareAccountSavingsService, clientReadPlatformService, shareAccountChargeReadPlatformService,
+                purchasedSharesReadPlatformService, jdbcTemplate, paginationHelper, sqlGenerator);
     }
 
     @Bean
     @ConditionalOnMissingBean(ShareAccountSchedularService.class)
-    public ShareAccountSchedularService shareAccountSchedularService(ShareAccountDividendRepository shareAccountDividendRepository,
-            SavingsAccountDomainService savingsAccountDomainService, SavingsAccountAssembler savingsAccountAssembler) {
-        return new ShareAccountSchedularServiceImpl(shareAccountDividendRepository, savingsAccountDomainService, savingsAccountAssembler);
+    public ShareAccountSchedularService shareAccountSchedularService(ShareDividendDetailsService shareDividendDetailsService,
+            ShareAccountSavingsService shareAccountSavingsService) {
+        return new ShareAccountSchedularServiceImpl(shareDividendDetailsService, shareAccountSavingsService);
     }
 
     @Bean
     @ConditionalOnMissingBean(ShareAccountWritePlatformService.class)
     public ShareAccountWritePlatformService shareAccountWritePlatformService(ShareAccountDataSerializer accountDataSerializer,
-            ShareAccountRepositoryWrapper shareAccountRepository, ShareProductRepositoryWrapper shareProductRepository,
-            AccountNumberGenerator accountNumberGenerator, AccountNumberFormatRepositoryWrapper accountNumberFormatRepository,
-            JournalEntryWritePlatformService journalEntryWritePlatformService, NoteRepository noteRepository,
-            BusinessEventNotifierService businessEventNotifierService) {
-        return new ShareAccountWritePlatformServiceJpaRepositoryImpl(accountDataSerializer, shareAccountRepository, shareProductRepository,
-                accountNumberGenerator, accountNumberFormatRepository, journalEntryWritePlatformService, noteRepository,
+            ShareAccountRepositoryWrapper shareAccountRepository, ShareAccountProductService shareAccountProductService,
+            ShareAccountNumberService shareAccountNumberService, ShareAccountJournalEntryService shareAccountJournalEntryService,
+            ShareAccountNoteService shareAccountNoteService, BusinessEventNotifierService businessEventNotifierService) {
+        return new ShareAccountWritePlatformServiceJpaRepositoryImpl(accountDataSerializer, shareAccountRepository,
+                shareAccountProductService, shareAccountNumberService, shareAccountJournalEntryService, shareAccountNoteService,
                 businessEventNotifierService);
     }
 }

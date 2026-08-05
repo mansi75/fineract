@@ -145,6 +145,31 @@ dependencies {
 
 apply from: 'dependencies.gradle'
 
+// Building the Spring Modulith model scans every fineract-* artifact, so it needs far more heap and metaspace than a
+// normal unit test. Keep it in its own task instead of raising the limits for the whole (very large) test suite.
+def boundaryTestPattern = '**/*CrossFeatureBoundaryTest.class'
+
+tasks.named('test') {
+    exclude boundaryTestPattern
+}
+
+tasks.register('boundaryTest', Test) {
+    description = 'Verifies feature module boundaries with Spring Modulith.'
+    group = 'verification'
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    include boundaryTestPattern
+    // ./gradlew :fineract-provider:boundaryTest -Pshareaccounts.boundary.report=true
+    systemProperty 'shareaccounts.boundary.report', providers.gradleProperty('shareaccounts.boundary.report').getOrElse('false')
+    maxHeapSize = '2g'
+    jvmArgs += ['-XX:MaxMetaspaceSize=1g']
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('boundaryTest')
+}
+
 // Configuration for the modernizer plugin
 // https://github.com/andygoossens/gradle-modernizer-plugin
 modernizer {

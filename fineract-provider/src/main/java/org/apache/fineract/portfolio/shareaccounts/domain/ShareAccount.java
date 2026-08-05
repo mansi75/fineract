@@ -41,8 +41,6 @@ import org.apache.fineract.infrastructure.security.service.RandomPasswordGenerat
 import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
 import org.apache.fineract.portfolio.client.domain.Client;
 import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
-import org.apache.fineract.portfolio.shareproducts.domain.ShareProduct;
 import org.apache.fineract.useradministration.domain.AppUser;
 
 @Entity
@@ -53,9 +51,8 @@ public class ShareAccount extends AbstractPersistableCustom<Long> {
     @JoinColumn(name = "client_id")
     private Client client;
 
-    @ManyToOne
-    @JoinColumn(name = "product_id")
-    private ShareProduct shareProduct;
+    @Column(name = "product_id")
+    private Long shareProductId;
 
     @Column(name = "status_enum", nullable = false)
     protected Integer status;
@@ -120,9 +117,8 @@ public class ShareAccount extends AbstractPersistableCustom<Long> {
     @Column(name = "allow_dividends_inactive_clients")
     private Boolean allowDividendCalculationForInactiveClients;
 
-    @ManyToOne
-    @JoinColumn(name = "savings_account_id")
-    private SavingsAccount savingsAccount;
+    @Column(name = "savings_account_id")
+    private Long savingsAccountId;
 
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "shareAccount", orphanRemoval = true, fetch = FetchType.EAGER)
     private Set<ShareAccountTransaction> shareAccountTransactions;
@@ -151,8 +147,8 @@ public class ShareAccount extends AbstractPersistableCustom<Long> {
 
     }
 
-    public ShareAccount(final Client client, final ShareProduct shareProduct, final String externalId, final MonetaryCurrency currency,
-            final SavingsAccount savingsAccount, final String accountNo, final Long totalSharesApproved, final Long totalSharesPending,
+    public ShareAccount(final Client client, final Long shareProductId, final String externalId, final MonetaryCurrency currency,
+            final Long savingsAccountId, final String accountNo, final Long totalSharesApproved, final Long totalSharesPending,
             final Set<ShareAccountTransaction> purchasedShares, final Boolean allowDividendCalculationForInactiveClients,
             final Integer lockinPeriodFrequency, final PeriodFrequencyType lockPeriodType, final Integer minimumActivePeriodFrequency,
             final PeriodFrequencyType minimumActivePeriodType, Set<ShareAccountCharge> charges, AppUser submittedBy,
@@ -161,10 +157,10 @@ public class ShareAccount extends AbstractPersistableCustom<Long> {
             LocalDateTime modifiedDate) {
 
         this.client = client;
-        this.shareProduct = shareProduct;
+        this.shareProductId = shareProductId;
         this.externalId = externalId;
         this.currency = currency;
-        this.savingsAccount = savingsAccount;
+        this.savingsAccountId = savingsAccountId;
         if (StringUtils.isBlank(accountNo)) {
             this.accountNumber = new RandomPasswordGenerator(19).generate();
             this.accountNumberRequiresAutoGeneration = true;
@@ -195,17 +191,17 @@ public class ShareAccount extends AbstractPersistableCustom<Long> {
         this.status = ShareAccountStatusType.SUBMITTED_AND_PENDING_APPROVAL.getValue();
     }
 
-    public boolean setShareProduct(final ShareProduct shareProduct) {
+    public boolean setShareProductId(final Long shareProductId) {
         boolean toReturn = false;
-        if (!this.shareProduct.getId().equals(shareProduct.getId())) {
-            this.shareProduct = shareProduct;
+        if (!this.shareProductId.equals(shareProductId)) {
+            this.shareProductId = shareProductId;
             toReturn = true;
         }
         return toReturn;
     }
 
-    public ShareProduct getShareProduct() {
-        return this.shareProduct;
+    public Long getShareProductId() {
+        return this.shareProductId;
     }
 
     public boolean setSubmittedDate(final LocalDate submittedDate) {
@@ -235,10 +231,10 @@ public class ShareAccount extends AbstractPersistableCustom<Long> {
         return toReturn;
     }
 
-    public boolean setSavingsAccount(final SavingsAccount savingsAccount) {
+    public boolean setSavingsAccountId(final Long savingsAccountId) {
         boolean returnValue = false;
-        if (!this.savingsAccount.getId().equals(savingsAccount.getId())) {
-            this.savingsAccount = savingsAccount;
+        if (!this.savingsAccountId.equals(savingsAccountId)) {
+            this.savingsAccountId = savingsAccountId;
             returnValue = true;
         }
         return returnValue;
@@ -341,10 +337,6 @@ public class ShareAccount extends AbstractPersistableCustom<Long> {
 
     public Client getClient() {
         return this.client;
-    }
-
-    public String getSavingsAccountNo() {
-        return this.savingsAccount.getAccountNumber();
     }
 
     public void addAddtionalShares(Set<ShareAccountTransaction> additionalShares) {

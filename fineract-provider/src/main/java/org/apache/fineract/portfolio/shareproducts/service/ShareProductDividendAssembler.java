@@ -31,9 +31,9 @@ import org.apache.fineract.portfolio.products.service.ShareProductReadPlatformSe
 import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountData;
 import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountTransactionData;
 import org.apache.fineract.portfolio.shareaccounts.domain.PurchasedSharesStatusType;
-import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountDividendDetails;
 import org.apache.fineract.portfolio.shareaccounts.service.ShareAccountReadPlatformService;
 import org.apache.fineract.portfolio.shareproducts.data.ShareProductData;
+import org.apache.fineract.portfolio.shareproducts.domain.ShareAccountDividendDetails;
 import org.apache.fineract.portfolio.shareproducts.domain.ShareProductDividendPayOutDetails;
 import org.apache.fineract.portfolio.shareproducts.exception.ShareAccountsNotFoundException;
 

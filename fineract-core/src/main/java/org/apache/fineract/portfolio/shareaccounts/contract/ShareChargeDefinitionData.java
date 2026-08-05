@@ -16,18 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.portfolio.accounts.exceptions;
+package org.apache.fineract.portfolio.shareaccounts.contract;
 
-import org.apache.fineract.infrastructure.core.exception.AbstractPlatformResourceNotFoundException;
-import org.springframework.dao.EmptyResultDataAccessException;
+import java.math.BigDecimal;
 
-public class ShareAccountNotFoundException extends AbstractPlatformResourceNotFoundException {
-
-    public ShareAccountNotFoundException(final Long id) {
-        super("error.msg.shareaccount.id.invalid", " Account with identifier " + id + " does not exist", id);
-    }
-
-    public ShareAccountNotFoundException(Long id, EmptyResultDataAccessException e) {
-        super("error.msg.shareaccount.id.invalid", " Account with identifier " + id + " does not exist", id, e);
-    }
+/**
+ * The charge definition fields a share account needs when it applies a charge. Lets share accounts keep a by-id
+ * reference to the charge instead of holding the charge aggregate itself.
+ */
+public record ShareChargeDefinitionData(Long chargeId, String name, String currencyCode, Integer chargeTimeType, Integer chargeCalculation,
+        BigDecimal amount, boolean active) {
 }

@@ -23,7 +23,6 @@ import java.time.LocalDate;
 import java.util.Collection;
 import org.apache.fineract.portfolio.charge.data.ChargeData;
 import org.apache.fineract.portfolio.savings.data.SavingsAccountChargeData;
-import org.apache.fineract.portfolio.shareaccounts.data.ShareAccountChargeData;
 
 public final class ConvertChargeDataToSpecificChargeData {
 
@@ -55,25 +54,4 @@ public final class ConvertChargeDataToSpecificChargeData {
                 chargeOptions, chargeData.isPenalty(), chargeData.getFeeOnMonthDay(), chargeData.getFeeInterval(), isActive,
                 isFreeWithdrawal, freeWithdrawalChargeFrequency, restartFrequency, restartFrequencyEnum, inactivationDate);
     }
-
-    public static ShareAccountChargeData toShareAccountChargeData(final ChargeData chargeData) {
-
-        final Long shareChargeId = null;
-        final Long shareAccountId = null;
-        final BigDecimal amountPaid = BigDecimal.ZERO;
-        final BigDecimal amountWaived = BigDecimal.ZERO;
-        final BigDecimal amountWrittenOff = BigDecimal.ZERO;
-        final BigDecimal amountOutstanding = BigDecimal.ZERO;
-        final BigDecimal percentage = BigDecimal.ZERO;
-        final BigDecimal amountPercentageAppliedTo = BigDecimal.ZERO;
-        final Collection<ChargeData> chargeOptions = null;
-        final Boolean isActive = null;
-        final BigDecimal chargeAmountOrPercentage = BigDecimal.ZERO;
-
-        return new ShareAccountChargeData(shareChargeId, chargeData.getId(), shareAccountId, chargeData.getName(), chargeData.getCurrency(),
-                chargeData.getAmount(), amountPaid, amountWaived, amountWrittenOff, amountOutstanding, chargeData.getChargeTimeType(),
-                chargeData.getChargeCalculationType(), percentage, amountPercentageAppliedTo, chargeOptions, isActive,
-                chargeAmountOrPercentage);
-    }
-
 }

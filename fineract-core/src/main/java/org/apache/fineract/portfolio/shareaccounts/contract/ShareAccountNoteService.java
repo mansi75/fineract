@@ -16,26 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.infrastructure.event.business.domain.share;
+package org.apache.fineract.portfolio.shareaccounts.contract;
 
-import org.apache.fineract.infrastructure.event.business.domain.AbstractBusinessEvent;
-import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccount;
+/**
+ * Records the free-text note a user can attach to a share account state change. Declared here so share accounts never
+ * compile against the note feature; notes own the implementation.
+ */
+public interface ShareAccountNoteService {
 
-public abstract class ShareAccountBusinessEvent extends AbstractBusinessEvent<ShareAccount> {
-
-    private static final String CATEGORY = "Share";
-
-    public ShareAccountBusinessEvent(ShareAccount value) {
-        super(value);
-    }
-
-    @Override
-    public String getCategory() {
-        return CATEGORY;
-    }
-
-    @Override
-    public Long getAggregateRootId() {
-        return get().getId();
-    }
+    void createShareAccountNote(Long shareAccountId, String note);
 }

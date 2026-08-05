@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.portfolio.accounts.constants;
+package org.apache.fineract.portfolio.shareaccounts.constants;
 
 import java.util.Arrays;
 import java.util.Collections;

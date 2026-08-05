@@ -63,6 +63,27 @@ public class ShareAccountChargeData implements Serializable {
 
     private final Collection<ChargeData> chargeOptions;
 
+    /**
+     * The share account charge a client would pay if the given charge definition were attached to a new share account.
+     */
+    public static ShareAccountChargeData template(final ChargeData chargeData) {
+        final Long shareChargeId = null;
+        final Long shareAccountId = null;
+        final BigDecimal amountPaid = BigDecimal.ZERO;
+        final BigDecimal amountWaived = BigDecimal.ZERO;
+        final BigDecimal amountWrittenOff = BigDecimal.ZERO;
+        final BigDecimal amountOutstanding = BigDecimal.ZERO;
+        final BigDecimal percentage = BigDecimal.ZERO;
+        final BigDecimal amountPercentageAppliedTo = BigDecimal.ZERO;
+        final Collection<ChargeData> chargeOptions = null;
+        final Boolean isActive = null;
+        final BigDecimal chargeAmountOrPercentage = BigDecimal.ZERO;
+        return new ShareAccountChargeData(shareChargeId, chargeData.getId(), shareAccountId, chargeData.getName(), chargeData.getCurrency(),
+                chargeData.getAmount(), amountPaid, amountWaived, amountWrittenOff, amountOutstanding, chargeData.getChargeTimeType(),
+                chargeData.getChargeCalculationType(), percentage, amountPercentageAppliedTo, chargeOptions, isActive,
+                chargeAmountOrPercentage);
+    }
+
     public ShareAccountChargeData(Long chargeId, BigDecimal amount) {
         this.chargeId = chargeId;
         this.amount = amount;

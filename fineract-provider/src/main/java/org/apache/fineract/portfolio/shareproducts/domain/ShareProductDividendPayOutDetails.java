@@ -29,7 +29,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.fineract.infrastructure.core.domain.AbstractAuditableCustom;
-import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountDividendDetails;
 
 @Entity
 @Table(name = "m_share_product_dividend_pay_out")

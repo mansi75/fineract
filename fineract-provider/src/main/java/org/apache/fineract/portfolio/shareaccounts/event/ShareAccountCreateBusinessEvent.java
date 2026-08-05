@@ -16,12 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.portfolio.shareaccounts.domain;
+package org.apache.fineract.portfolio.shareaccounts.event;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccount;
 
-public interface ShareAccountDividendRepository
-        extends JpaRepository<ShareAccountDividendDetails, Long>, JpaSpecificationExecutor<ShareAccountDividendDetails> {
+public class ShareAccountCreateBusinessEvent extends ShareAccountBusinessEvent {
 
+    private static final String TYPE = "ShareAccountCreateBusinessEvent";
+
+    public ShareAccountCreateBusinessEvent(ShareAccount value) {
+        super(value);
+    }
+
+    @Override
+    public String getType() {
+        return TYPE;
+    }
 }

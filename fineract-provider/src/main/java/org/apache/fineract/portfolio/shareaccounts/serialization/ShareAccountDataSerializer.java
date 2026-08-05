@@ -48,26 +48,23 @@ import org.apache.fineract.infrastructure.security.service.PlatformSecurityConte
 import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
 import org.apache.fineract.organisation.monetary.domain.Money;
 import org.apache.fineract.organisation.monetary.exception.InvalidCurrencyException;
-import org.apache.fineract.portfolio.accounts.constants.ShareAccountApiConstants;
-import org.apache.fineract.portfolio.charge.domain.Charge;
 import org.apache.fineract.portfolio.charge.domain.ChargeCalculationType;
-import org.apache.fineract.portfolio.charge.domain.ChargeRepositoryWrapper;
 import org.apache.fineract.portfolio.charge.domain.ChargeTimeType;
 import org.apache.fineract.portfolio.client.domain.Client;
-import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
+import org.apache.fineract.portfolio.client.domain.ClientRepository;
+import org.apache.fineract.portfolio.client.exception.ClientNotFoundException;
 import org.apache.fineract.portfolio.common.domain.PeriodFrequencyType;
-import org.apache.fineract.portfolio.savings.DepositAccountType;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccountRepositoryWrapper;
-import org.apache.fineract.portfolio.savings.exception.SavingsAccountNotFoundException;
-import org.apache.fineract.portfolio.savings.service.SavingsAccountReadPlatformService;
+import org.apache.fineract.portfolio.shareaccounts.constants.ShareAccountApiConstants;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountChargeReadService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountProductService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountSavingsService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareChargeDefinitionData;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareProductDetailsData;
 import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccount;
 import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountCharge;
 import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountChargePaidBy;
 import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountStatusType;
 import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountTransaction;
-import org.apache.fineract.portfolio.shareproducts.domain.ShareProduct;
-import org.apache.fineract.portfolio.shareproducts.domain.ShareProductRepositoryWrapper;
 import org.apache.fineract.useradministration.domain.AppUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,15 +80,13 @@ public class ShareAccountDataSerializer {
 
     private final FromJsonHelper fromApiJsonHelper;
 
-    private final ChargeRepositoryWrapper chargeRepository;
+    private final ShareAccountChargeReadService shareAccountChargeReadService;
 
-    private final SavingsAccountRepositoryWrapper savingsAccountRepositoryWrapper;
+    private final ClientRepository clientRepository;
 
-    private final ClientRepositoryWrapper clientRepositoryWrapper;
+    private final ShareAccountProductService shareAccountProductService;
 
-    private final ShareProductRepositoryWrapper shareProductRepository;
-
-    private final SavingsAccountReadPlatformService savingsAccountReadPlatformService;
+    private final ShareAccountSavingsService shareAccountSavingsService;
 
     private static final Set<String> approvalParameters = new HashSet<>(
             Arrays.asList(ShareAccountApiConstants.locale_paramname, ShareAccountApiConstants.dateformat_paramname,
@@ -110,16 +105,14 @@ public class ShareAccountDataSerializer {
 
     @Autowired
     public ShareAccountDataSerializer(final PlatformSecurityContext platformSecurityContext, final FromJsonHelper fromApiJsonHelper,
-            final ChargeRepositoryWrapper chargeRepository, final SavingsAccountRepositoryWrapper savingsAccountRepositoryWrapper,
-            final ClientRepositoryWrapper clientRepositoryWrapper, final ShareProductRepositoryWrapper shareProductRepository,
-            final SavingsAccountReadPlatformService savingsAccountReadPlatformService) {
+            final ShareAccountChargeReadService shareAccountChargeReadService, final ClientRepository clientRepository,
+            final ShareAccountProductService shareAccountProductService, final ShareAccountSavingsService shareAccountSavingsService) {
         this.platformSecurityContext = platformSecurityContext;
         this.fromApiJsonHelper = fromApiJsonHelper;
-        this.chargeRepository = chargeRepository;
-        this.savingsAccountRepositoryWrapper = savingsAccountRepositoryWrapper;
-        this.clientRepositoryWrapper = clientRepositoryWrapper;
-        this.shareProductRepository = shareProductRepository;
-        this.savingsAccountReadPlatformService = savingsAccountReadPlatformService;
+        this.shareAccountChargeReadService = shareAccountChargeReadService;
+        this.clientRepository = clientRepository;
+        this.shareAccountProductService = shareAccountProductService;
+        this.shareAccountSavingsService = shareAccountSavingsService;
     }
 
     public ShareAccount validateAndCreate(JsonCommand jsonCommand) {
@@ -137,7 +130,7 @@ public class ShareAccountDataSerializer {
         final Locale locale = this.fromApiJsonHelper.extractLocaleParameter(element.getAsJsonObject());
         final Long clientId = this.fromApiJsonHelper.extractLongNamed(ShareAccountApiConstants.clientid_paramname, element);
         final Long productId = this.fromApiJsonHelper.extractLongNamed(ShareAccountApiConstants.productid_paramname, element);
-        ShareProduct shareProduct = this.shareProductRepository.findOneWithNotFoundDetection(productId);
+        ShareProductDetailsData shareProduct = this.shareAccountProductService.findProduct(productId);
         final LocalDate submittedDate = this.fromApiJsonHelper.extractLocalDateNamed(ShareAccountApiConstants.submitteddate_paramname,
                 element);
         baseDataValidator.reset().parameter(ShareAccountApiConstants.submitteddate_paramname).value(submittedDate).notNull();
@@ -152,15 +145,13 @@ public class ShareAccountDataSerializer {
         baseDataValidator.reset().parameter(ShareAccountApiConstants.requestedshares_paramname).value(requestedShares).notNull()
                 .longGreaterThanZero();
 
-        if (requestedShares != null && shareProduct.getMinimumClientShares() != null
-                && requestedShares < shareProduct.getMinimumClientShares()) {
+        if (requestedShares != null && shareProduct.minimumClientShares() != null && requestedShares < shareProduct.minimumClientShares()) {
             baseDataValidator.reset().parameter(ShareAccountApiConstants.requestedshares_paramname).value(requestedShares).failWithCode(
                     "client.can.not.purchase.shares.lessthan.product.definition",
                     "Client can not purchase shares less than product definition");
         }
 
-        if (requestedShares != null && shareProduct.getMaximumClientShares() != null
-                && requestedShares > shareProduct.getMaximumClientShares()) {
+        if (requestedShares != null && shareProduct.maximumClientShares() != null && requestedShares > shareProduct.maximumClientShares()) {
             baseDataValidator.reset().parameter(ShareAccountApiConstants.requestedshares_paramname).value(requestedShares).failWithCode(
                     "client.can.not.purchase.shares.morethan.product.definition",
                     "Client can not purchase shares more than product definition");
@@ -189,14 +180,9 @@ public class ShareAccountDataSerializer {
             throw new PlatformApiDataValidationException(dataValidationErrors);
         }
 
-        Client client = this.clientRepositoryWrapper.findOneWithNotFoundDetection(clientId);
-        if (!this.savingsAccountReadPlatformService.isAccountBelongsToClient(clientId, savingsAccountId, DepositAccountType.SAVINGS_DEPOSIT,
-                shareProduct.getCurrency().getCode())) {
-            throw new SavingsAccountNotFoundException(savingsAccountId);
-        }
-        SavingsAccount savingsAccount = this.savingsAccountRepositoryWrapper.findOneWithNotFoundDetection(savingsAccountId,
-                DepositAccountType.SAVINGS_DEPOSIT);
-        final MonetaryCurrency currency = shareProduct.getCurrency();
+        Client client = findClient(clientId);
+        this.shareAccountSavingsService.validateSavingsDepositOfClient(clientId, savingsAccountId, shareProduct.currency().getCode());
+        final MonetaryCurrency currency = shareProduct.toMonetaryCurrency();
         Set<ShareAccountCharge> charges = assembleListOfAccountCharges(element, currency.getCode());
 
         AppUser submittedBy = platformSecurityContext.authenticatedUser();
@@ -218,10 +204,10 @@ public class ShareAccountDataSerializer {
         Set<ShareAccountTransaction> sharesPurchased = new HashSet<>();
         sharesPurchased.add(transaction);
 
-        ShareAccount account = new ShareAccount(client, shareProduct, externalId, currency, savingsAccount, accountNo, approvedShares,
-                pendingShares, sharesPurchased, allowdividendsForInactiveClients, lockinPeriod, lockPeriodEnum, minimumActivePeriod,
-                minimumActivePeriodEnum, charges, submittedBy, submittedDate, approvedBy, approvedDate, rejectedBy, rejectedDate,
-                activatedBy, activatedDate, closedBy, closedDate, modifiedBy, modifiedDate);
+        ShareAccount account = new ShareAccount(client, shareProduct.id(), externalId, currency, savingsAccountId, accountNo,
+                approvedShares, pendingShares, sharesPurchased, allowdividendsForInactiveClients, lockinPeriod, lockPeriodEnum,
+                minimumActivePeriod, minimumActivePeriodEnum, charges, submittedBy, submittedDate, approvedBy, approvedDate, rejectedBy,
+                rejectedDate, activatedBy, activatedDate, closedBy, closedDate, modifiedBy, modifiedDate);
 
         for (ShareAccountTransaction pur : sharesPurchased) {
             pur.setShareAccount(account);
@@ -277,12 +263,12 @@ public class ShareAccountDataSerializer {
         final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
         final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors).resource("sharesaccount");
         JsonElement element = jsonCommand.parsedJson();
-        ShareProduct shareProduct = account.getShareProduct();
+        ShareProductDetailsData shareProduct = this.shareAccountProductService.findProduct(account.getShareProductId());
         final Locale locale = this.fromApiJsonHelper.extractLocaleParameter(element.getAsJsonObject());
         if (this.fromApiJsonHelper.parameterExists(ShareAccountApiConstants.productid_paramname, element)) {
             final Long productId = this.fromApiJsonHelper.extractLongNamed(ShareAccountApiConstants.productid_paramname, element);
-            shareProduct = this.shareProductRepository.findOneWithNotFoundDetection(productId);
-            if (account.setShareProduct(shareProduct)) {
+            shareProduct = this.shareAccountProductService.findProduct(productId);
+            if (account.setShareProductId(productId)) {
                 actualChanges.put(ShareAccountApiConstants.productid_paramname, productId);
             }
         }
@@ -309,13 +295,10 @@ public class ShareAccountDataSerializer {
             baseDataValidator.reset().parameter(ShareAccountApiConstants.savingsaccountid_paramname).value(savingsAccountId).notNull()
                     .longGreaterThanZero();
             if (savingsAccountId != null) {
-                if (!this.savingsAccountReadPlatformService.isAccountBelongsToClient(account.getClientId(), savingsAccountId,
-                        DepositAccountType.SAVINGS_DEPOSIT, shareProduct.getCurrency().getCode())) {
-                    throw new SavingsAccountNotFoundException(savingsAccountId);
-                }
-                SavingsAccount savingsAccount = this.savingsAccountRepositoryWrapper.findOneWithNotFoundDetection(savingsAccountId);
-                if (account.setSavingsAccount(savingsAccount)) {
-                    actualChanges.put(ShareAccountApiConstants.savingsaccountid_paramname, savingsAccount.getId());
+                this.shareAccountSavingsService.validateSavingsDepositOfClient(account.getClientId(), savingsAccountId,
+                        shareProduct.currency().getCode());
+                if (account.setSavingsAccountId(savingsAccountId)) {
+                    actualChanges.put(ShareAccountApiConstants.savingsaccountid_paramname, savingsAccountId);
                 }
             }
         }
@@ -349,8 +332,9 @@ public class ShareAccountDataSerializer {
                     ChargeTimeType chargeTime = null;
                     ChargeCalculationType chargeCalculation = null;
                     Boolean status = Boolean.TRUE;
-                    ShareAccountCharge accountCharge = ShareAccountCharge.createNewWithoutShareAccount(charge.getCharge(),
-                            charge.percentageOrAmount(), chargeTime, chargeCalculation, status);
+                    ShareAccountCharge accountCharge = ShareAccountCharge.createNewWithoutShareAccount(
+                            this.shareAccountChargeReadService.findChargeDefinition(charge.getChargeId()), charge.percentageOrAmount(),
+                            chargeTime, chargeCalculation, status);
                     chargesList.add(accountCharge);
                 }
             }
@@ -372,13 +356,13 @@ public class ShareAccountDataSerializer {
             purchaseTransactionsList.add(transaction);
             actualChanges.put(ShareAccountApiConstants.requestedshares_paramname, "Transaction");
 
-            if (shareProduct.getMinimumClientShares() != null && requestedShares < shareProduct.getMinimumClientShares()) {
+            if (shareProduct.minimumClientShares() != null && requestedShares < shareProduct.minimumClientShares()) {
                 baseDataValidator.reset().parameter(ShareAccountApiConstants.requestedshares_paramname).value(requestedShares).failWithCode(
                         "client.can.not.purchase.shares.lessthan.product.definition",
                         "Client can not purchase shares less than product definition");
             }
 
-            if (shareProduct.getMaximumClientShares() != null && requestedShares > shareProduct.getMaximumClientShares()) {
+            if (shareProduct.maximumClientShares() != null && requestedShares > shareProduct.maximumClientShares()) {
                 baseDataValidator.reset().parameter(ShareAccountApiConstants.requestedshares_paramname).value(requestedShares).failWithCode(
                         "client.can.not.purchase.shares.morethan.product.definition",
                         "Client can not purchase shares more than product definition");
@@ -435,8 +419,8 @@ public class ShareAccountDataSerializer {
             }
         }
         if (this.fromApiJsonHelper.parameterExists(ShareAccountApiConstants.charges_paramname, element)) {
-            shareProduct = account.getShareProduct();
-            final MonetaryCurrency currency = shareProduct.getCurrency();
+            shareProduct = this.shareAccountProductService.findProduct(account.getShareProductId());
+            final MonetaryCurrency currency = shareProduct.toMonetaryCurrency();
             chargesList = assembleListOfAccountCharges(element, currency.getCode());
             if (chargesList != null) {
                 if (!chargesList.isEmpty()) {
@@ -502,14 +486,15 @@ public class ShareAccountDataSerializer {
 
     private void validateTotalSubsribedShares(final ShareAccount account, final ShareAccountTransaction transaction,
             final DataValidatorBuilder baseDataValidator) {
-        Long totalSubsribedShares = account.getShareProduct().getSubscribedShares();
+        final ShareProductDetailsData shareProduct = this.shareAccountProductService.findProduct(account.getShareProductId());
+        Long totalSubsribedShares = shareProduct.subscribedShares();
         Long requested = Long.valueOf(0);
         if (transaction.isActive() && transaction.isPendingForApprovalTransaction()) {
             requested += transaction.getTotalShares();
         }
-        Long totalSharesIssuable = account.getShareProduct().getSharesIssued();
+        Long totalSharesIssuable = shareProduct.sharesIssued();
         if (totalSharesIssuable == null) {
-            totalSharesIssuable = account.getShareProduct().getTotalShares();
+            totalSharesIssuable = shareProduct.totalShares();
         }
         if (totalSubsribedShares == null) {
             totalSubsribedShares = Long.valueOf(0);
@@ -659,8 +644,8 @@ public class ShareAccountDataSerializer {
                     if (jsonObject.has("chargeId")) {
                         final Long id = jsonObject.get("chargeId").getAsLong();
                         BigDecimal amount = jsonObject.get("amount").getAsBigDecimal();
-                        final Charge charge = this.chargeRepository.findOneWithNotFoundDetection(id);
-                        if (!currencyCode.equals(charge.getCurrencyCode())) {
+                        final ShareChargeDefinitionData charge = this.shareAccountChargeReadService.findChargeDefinition(id);
+                        if (!currencyCode.equals(charge.currencyCode())) {
                             final String errorMessage = "Charge and Share Account must have the same currency.";
                             throw new InvalidCurrencyException("charge", "attach.to.share.account", errorMessage);
                         }
@@ -676,6 +661,10 @@ public class ShareAccountDataSerializer {
             }
         }
         return charges;
+    }
+
+    private Client findClient(final Long clientId) {
+        return this.clientRepository.findById(clientId).orElseThrow(() -> new ClientNotFoundException(clientId));
     }
 
     private PeriodFrequencyType extractPeriodType(String paramName, final JsonElement element) {
@@ -701,10 +690,10 @@ public class ShareAccountDataSerializer {
         baseDataValidator.reset().parameter(ShareAccountApiConstants.requesteddate_paramname).value(requestedDate).notNull();
         final Long sharesRequested = this.fromApiJsonHelper.extractLongNamed(ShareAccountApiConstants.requestedshares_paramname, element);
         baseDataValidator.reset().parameter(ShareAccountApiConstants.requestedshares_paramname).value(sharesRequested).notNull();
-        ShareProduct shareProduct = account.getShareProduct();
+        ShareProductDetailsData shareProduct = this.shareAccountProductService.findProduct(account.getShareProductId());
         if (sharesRequested != null) {
             Long totalSharesAfterapproval = account.getTotalApprovedShares() + sharesRequested;
-            if (shareProduct.getMaximumClientShares() != null && totalSharesAfterapproval > shareProduct.getMaximumClientShares()) {
+            if (shareProduct.maximumClientShares() != null && totalSharesAfterapproval > shareProduct.maximumClientShares()) {
                 baseDataValidator.reset().parameter(ShareAccountApiConstants.requestedshares_paramname).value(sharesRequested).failWithCode(
                         "exceeding.maximum.limit.defined.in.the.shareproduct",
                         "Existing and requested shares count is more than product definition");
@@ -886,7 +875,7 @@ public class ShareAccountDataSerializer {
         if (!dataValidationErrors.isEmpty()) {
             throw new PlatformApiDataValidationException(dataValidationErrors);
         }
-        BigDecimal unitPrice = account.getShareProduct().deriveMarketPrice(requestedDate);
+        BigDecimal unitPrice = this.shareAccountProductService.findProduct(account.getShareProductId()).deriveMarketPrice(requestedDate);
         ShareAccountTransaction transaction = ShareAccountTransaction.createRedeemTransaction(requestedDate, sharesRequested, unitPrice);
         validateRedeemRequest(account, transaction, baseDataValidator, dataValidationErrors);
         account.addAdditionalPurchasedShares(transaction);
@@ -1036,7 +1025,8 @@ public class ShareAccountDataSerializer {
         }
 
         AppUser approvedUser = this.platformSecurityContext.authenticatedUser();
-        final BigDecimal unitPrice = account.getShareProduct().deriveMarketPrice(DateUtils.getBusinessLocalDate());
+        final BigDecimal unitPrice = this.shareAccountProductService.findProduct(account.getShareProductId())
+                .deriveMarketPrice(DateUtils.getBusinessLocalDate());
         ShareAccountTransaction transaction = ShareAccountTransaction.createRedeemTransaction(closedDate, account.getTotalApprovedShares(),
                 unitPrice);
         account.addAdditionalPurchasedShares(transaction);

@@ -23,8 +23,8 @@ import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
-import org.apache.fineract.portfolio.accounts.constants.ShareAccountApiConstants;
 import org.apache.fineract.portfolio.accounts.service.AccountsCommandsService;
+import org.apache.fineract.portfolio.shareaccounts.constants.ShareAccountApiConstants;
 import org.apache.fineract.portfolio.shareaccounts.serialization.ShareAccountDataSerializer;
 
 @RequiredArgsConstructor

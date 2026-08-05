@@ -16,20 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.infrastructure.event.business.domain.share;
+package org.apache.fineract.portfolio.shareaccounts.event;
 
+import org.apache.fineract.infrastructure.event.business.domain.AbstractBusinessEvent;
 import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccount;
 
-public class ShareAccountCreateBusinessEvent extends ShareAccountBusinessEvent {
+public abstract class ShareAccountBusinessEvent extends AbstractBusinessEvent<ShareAccount> {
 
-    private static final String TYPE = "ShareAccountCreateBusinessEvent";
+    private static final String CATEGORY = "Share";
 
-    public ShareAccountCreateBusinessEvent(ShareAccount value) {
+    public ShareAccountBusinessEvent(ShareAccount value) {
         super(value);
     }
 
     @Override
-    public String getType() {
-        return TYPE;
+    public String getCategory() {
+        return CATEGORY;
+    }
+
+    @Override
+    public Long getAggregateRootId() {
+        return get().getId();
     }
 }

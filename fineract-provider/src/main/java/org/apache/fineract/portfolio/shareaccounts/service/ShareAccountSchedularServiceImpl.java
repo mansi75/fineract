@@ -18,35 +18,25 @@
  */
 package org.apache.fineract.portfolio.shareaccounts.service;
 
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccountAssembler;
-import org.apache.fineract.portfolio.savings.domain.SavingsAccountTransaction;
-import org.apache.fineract.portfolio.savings.service.SavingsAccountDomainService;
-import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountDividendDetails;
-import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountDividendRepository;
-import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccountDividendStatusType;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareAccountSavingsService;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareDividendDetailsService;
 import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
 public class ShareAccountSchedularServiceImpl implements ShareAccountSchedularService {
 
-    private final ShareAccountDividendRepository shareAccountDividendRepository;
-    private final SavingsAccountDomainService savingsAccountDomainService;
-    private final SavingsAccountAssembler savingsAccountAssembler;
+    private final ShareDividendDetailsService shareDividendDetailsService;
+    private final ShareAccountSavingsService shareAccountSavingsService;
 
     @Override
     @Transactional
     public void postDividend(final Long dividendDetailId, final Long savingsId) {
-
-        ShareAccountDividendDetails shareAccountDividendDetails = this.shareAccountDividendRepository.findById(dividendDetailId)
-                .orElseThrow();
-        final SavingsAccount savingsAccount = this.savingsAccountAssembler.assembleFrom(savingsId, false);
-        SavingsAccountTransaction savingsAccountTransaction = this.savingsAccountDomainService.handleDividendPayout(savingsAccount,
-                DateUtils.getBusinessLocalDate(), shareAccountDividendDetails.getAmount(), false);
-        shareAccountDividendDetails.update(ShareAccountDividendStatusType.POSTED.getValue(), savingsAccountTransaction.getId());
-        this.shareAccountDividendRepository.saveAndFlush(shareAccountDividendDetails);
+        final BigDecimal dividendAmount = this.shareDividendDetailsService.retrieveDividendAmount(dividendDetailId);
+        final Long savingsTransactionId = this.shareAccountSavingsService.payDividend(savingsId, DateUtils.getBusinessLocalDate(),
+                dividendAmount);
+        this.shareDividendDetailsService.markDividendPosted(dividendDetailId, savingsTransactionId);
     }
-
 }

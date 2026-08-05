@@ -39,8 +39,6 @@ import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccount;
 import org.apache.fineract.portfolio.savings.domain.SavingsAccountRepository;
 import org.apache.fineract.portfolio.savings.domain.SavingsProduct;
-import org.apache.fineract.portfolio.shareaccounts.domain.ShareAccount;
-import org.apache.fineract.portfolio.shareproducts.domain.ShareProduct;
 import org.apache.fineract.portfolio.workingcapitalloan.repository.WorkingCapitalLoanRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -133,17 +131,10 @@ public class AccountNumberGeneratorTest {
 
     @Test
     public void testGenerateShareAccountNumber() {
-        ShareAccount share = mock(ShareAccount.class);
-        ShareProduct product = mock(ShareProduct.class);
-
-        when(share.getId()).thenReturn(321L);
-        when(share.getShareProduct()).thenReturn(product);
-        when(product.getShortName()).thenReturn("SH01");
-
         AccountNumberFormat format = mock(AccountNumberFormat.class);
         when(format.getPrefixEnum()).thenReturn(null);
 
-        String accountNumber = generator.generate(share, format);
+        String accountNumber = generator.generateForShareAccount(321L, "SH01", format);
         assertThat(accountNumber).isEqualTo("000000321");
     }
 

@@ -29,9 +29,9 @@ import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
 import org.apache.fineract.organisation.monetary.domain.MonetaryCurrency;
 import org.apache.fineract.organisation.monetary.domain.Money;
 import org.apache.fineract.organisation.monetary.domain.MoneyHelper;
-import org.apache.fineract.portfolio.charge.domain.Charge;
 import org.apache.fineract.portfolio.charge.domain.ChargeCalculationType;
 import org.apache.fineract.portfolio.charge.domain.ChargeTimeType;
+import org.apache.fineract.portfolio.shareaccounts.contract.ShareChargeDefinitionData;
 
 @Entity
 @Table(name = "m_share_account_charge")
@@ -41,9 +41,8 @@ public class ShareAccountCharge extends AbstractPersistableCustom<Long> {
     @JoinColumn(name = "account_id", referencedColumnName = "id", nullable = false)
     private ShareAccount shareAccount;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "charge_id", referencedColumnName = "id", nullable = false)
-    private Charge charge;
+    @Column(name = "charge_id", nullable = false)
+    private Long chargeId;
 
     @Column(name = "charge_time_enum", nullable = false)
     private Integer chargeTime;
@@ -84,8 +83,9 @@ public class ShareAccountCharge extends AbstractPersistableCustom<Long> {
     @Column(name = "charge_amount_or_percentage")
     private BigDecimal amountOrPercentage;
 
-    public static ShareAccountCharge createNewWithoutShareAccount(final Charge chargeDefinition, final BigDecimal amountPayable,
-            final ChargeTimeType chargeTime, final ChargeCalculationType chargeCalculation, final boolean status) {
+    public static ShareAccountCharge createNewWithoutShareAccount(final ShareChargeDefinitionData chargeDefinition,
+            final BigDecimal amountPayable, final ChargeTimeType chargeTime, final ChargeCalculationType chargeCalculation,
+            final boolean status) {
         return new ShareAccountCharge(null, chargeDefinition, amountPayable, chargeTime, chargeCalculation, status);
     }
 
@@ -93,19 +93,19 @@ public class ShareAccountCharge extends AbstractPersistableCustom<Long> {
         //
     }
 
-    private ShareAccountCharge(final ShareAccount shareAccount, final Charge chargeDefinition, final BigDecimal amount,
+    private ShareAccountCharge(final ShareAccount shareAccount, final ShareChargeDefinitionData chargeDefinition, final BigDecimal amount,
             final ChargeTimeType chargeTime, final ChargeCalculationType chargeCalculation, final boolean status) {
 
         this.shareAccount = shareAccount;
-        this.charge = chargeDefinition;
-        this.chargeTime = chargeTime == null ? chargeDefinition.getChargeTimeType() : chargeTime.getValue();
+        this.chargeId = chargeDefinition.chargeId();
+        this.chargeTime = chargeTime == null ? chargeDefinition.chargeTimeType() : chargeTime.getValue();
 
-        this.chargeCalculation = chargeDefinition.getChargeCalculation();
+        this.chargeCalculation = chargeDefinition.chargeCalculation();
         if (chargeCalculation != null) {
             this.chargeCalculation = chargeCalculation.getValue();
         }
 
-        BigDecimal chargeAmount = chargeDefinition.getAmount();
+        BigDecimal chargeAmount = chargeDefinition.amount();
         if (amount != null) {
             chargeAmount = amount;
         }
@@ -307,16 +307,8 @@ public class ShareAccountCharge extends AbstractPersistableCustom<Long> {
         return amountPaidOnThisCharge;
     }
 
-    public String name() {
-        return this.charge.getName();
-    }
-
-    public String currencyCode() {
-        return this.charge.getCurrencyCode();
-    }
-
-    public Charge getCharge() {
-        return this.charge;
+    public Long getChargeId() {
+        return this.chargeId;
     }
 
     public ShareAccount shareAccount() {
@@ -329,13 +321,6 @@ public class ShareAccountCharge extends AbstractPersistableCustom<Long> {
 
     public boolean isShareAccountClosure() {
         return ChargeTimeType.fromInt(this.chargeTime).isSavingsClosure();
-    }
-
-    public boolean hasCurrencyCodeOf(final String matchingCurrencyCode) {
-        if (this.currencyCode() == null || matchingCurrencyCode == null) {
-            return false;
-        }
-        return this.currencyCode().equalsIgnoreCase(matchingCurrencyCode);
     }
 
     public BigDecimal updateWithdralFeeAmount(final BigDecimal transactionAmount) {
@@ -355,10 +340,6 @@ public class ShareAccountCharge extends AbstractPersistableCustom<Long> {
 
     public boolean isNotActive() {
         return !isActive();
-    }
-
-    public Long getChargeId() {
-        return this.charge.getId();
     }
 
     public boolean isSharesPurchaseCharge() {

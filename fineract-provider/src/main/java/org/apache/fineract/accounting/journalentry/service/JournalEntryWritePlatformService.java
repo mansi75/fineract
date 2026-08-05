@@ -19,7 +19,7 @@
 package org.apache.fineract.accounting.journalentry.service;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import org.apache.fineract.accounting.provisioning.domain.ProvisioningEntry;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
@@ -52,7 +52,7 @@ public interface JournalEntryWritePlatformService {
 
     void createJournalEntriesForShares(Map<String, Object> accountingBridgeData);
 
-    void revertShareAccountJournalEntries(ArrayList<Long> transactionId, LocalDate transactionDate);
+    void revertShareAccountJournalEntries(List<Long> transactionId, LocalDate transactionDate);
 
     /**
      * Create journal entries immediately for a single loan transaction
