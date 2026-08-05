@@ -71,7 +71,7 @@ import org.apache.fineract.infrastructure.core.service.Page;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.infrastructure.security.service.SqlValidator;
 import org.apache.fineract.portfolio.account.data.PortfolioAccountData;
-import org.apache.fineract.portfolio.account.service.AccountAssociationsReadPlatformService;
+import org.apache.fineract.portfolio.fixeddeposit.contract.FixedDepositAccountAssociationReadService;
 import org.apache.fineract.portfolio.savings.DepositAccountType;
 import org.apache.fineract.portfolio.savings.DepositsApiConstants;
 import org.apache.fineract.portfolio.savings.SavingsApiConstants;
@@ -102,7 +102,7 @@ public class FixedDepositAccountsApiResource {
     private final SavingsAccountChargeReadPlatformService savingsAccountChargeReadPlatformService;
     private final FromJsonHelper fromJsonHelper;
     private final DepositAccountPreMatureCalculationPlatformService accountPreMatureCalculationPlatformService;
-    private final AccountAssociationsReadPlatformService accountAssociationsReadPlatformService;
+    private final FixedDepositAccountAssociationReadService accountAssociationReadService;
     private final BulkImportWorkbookService bulkImportWorkbookService;
     private final BulkImportWorkbookPopulatorService bulkImportWorkbookPopulatorService;
     private final FixedDepositAccountInterestCalculationService fixedDepositAccountInterestCalculationService;
@@ -316,13 +316,12 @@ public class FixedDepositAccountsApiResource {
 
             if (associationParameters.contains(SavingsApiConstants.linkedAccount)) {
                 mandatoryResponseParameters.add(SavingsApiConstants.linkedAccount);
-                linkedAccount = this.accountAssociationsReadPlatformService.retriveSavingsLinkedAssociation(accountId);
+                linkedAccount = this.accountAssociationReadService.retrieveLinkedSavingsAccount(accountId);
             }
         }
 
         if (savingsAccount.getTransferToSavingsId() != null) {
-            transferToSavingsAccount = this.accountAssociationsReadPlatformService
-                    .retriveSavingsAccount(savingsAccount.getTransferToSavingsId());
+            transferToSavingsAccount = this.accountAssociationReadService.retrieveSavingsAccount(savingsAccount.getTransferToSavingsId());
         }
 
         FixedDepositAccountData templateData = null;

@@ -42,13 +42,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.apache.fineract.accounting.common.AccountingDropdownReadPlatformService;
 import org.apache.fineract.accounting.common.AccountingEnumerations;
 import org.apache.fineract.accounting.common.AccountingRuleType;
 import org.apache.fineract.accounting.glaccount.data.GLAccountData;
 import org.apache.fineract.accounting.producttoaccountmapping.data.ChargeToGLAccountMapper;
 import org.apache.fineract.accounting.producttoaccountmapping.data.PaymentTypeToGLAccountMapper;
-import org.apache.fineract.accounting.producttoaccountmapping.service.ProductToGLAccountMappingReadPlatformService;
 import org.apache.fineract.commands.domain.CommandWrapper;
 import org.apache.fineract.commands.service.CommandWrapperBuilder;
 import org.apache.fineract.commands.service.PortfolioCommandSourceWritePlatformService;
@@ -62,8 +60,10 @@ import org.apache.fineract.infrastructure.security.service.PlatformSecurityConte
 import org.apache.fineract.organisation.monetary.data.CurrencyData;
 import org.apache.fineract.organisation.monetary.service.CurrencyReadPlatformService;
 import org.apache.fineract.portfolio.charge.data.ChargeData;
-import org.apache.fineract.portfolio.charge.service.ChargeReadPlatformService;
 import org.apache.fineract.portfolio.common.service.DropdownReadPlatformService;
+import org.apache.fineract.portfolio.fixeddeposit.contract.FixedDepositAccountingReadService;
+import org.apache.fineract.portfolio.fixeddeposit.contract.FixedDepositChargeReadService;
+import org.apache.fineract.portfolio.fixeddeposit.contract.FixedDepositTaxReadService;
 import org.apache.fineract.portfolio.interestratechart.data.InterestRateChartData;
 import org.apache.fineract.portfolio.interestratechart.service.InterestRateChartReadService;
 import org.apache.fineract.portfolio.paymenttype.data.PaymentTypeData;
@@ -80,7 +80,6 @@ import org.apache.fineract.portfolio.savings.service.DepositsDropdownReadPlatfor
 import org.apache.fineract.portfolio.savings.service.SavingsDropdownReadPlatformService;
 import org.apache.fineract.portfolio.savings.service.SavingsEnumerations;
 import org.apache.fineract.portfolio.tax.data.TaxGroupData;
-import org.apache.fineract.portfolio.tax.service.TaxReadPlatformService;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
@@ -102,15 +101,14 @@ public class FixedDepositProductsApiResource {
     private final DefaultToApiJsonSerializer<FixedDepositProductData> toApiJsonSerializer;
     private final PortfolioCommandSourceWritePlatformService commandsSourceWritePlatformService;
     private final ApiRequestParameterHelper apiRequestParameterHelper;
-    private final AccountingDropdownReadPlatformService accountingDropdownReadPlatformService;
-    private final ProductToGLAccountMappingReadPlatformService accountMappingReadPlatformService;
-    private final ChargeReadPlatformService chargeReadPlatformService;
+    private final FixedDepositAccountingReadService accountingReadService;
+    private final FixedDepositChargeReadService chargeReadService;
     private final InterestRateChartReadService chartReadPlatformService;
     private final InterestRateChartReadService interestRateChartReadPlatformService;
     private final DepositsDropdownReadPlatformService depositsDropdownReadPlatformService;
     private final DropdownReadPlatformService dropdownReadPlatformService;
     private final PaymentTypeReadService paymentTypeReadPlatformService;
-    private final TaxReadPlatformService taxReadPlatformService;
+    private final FixedDepositTaxReadService taxReadService;
 
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -208,7 +206,7 @@ public class FixedDepositProductsApiResource {
         FixedDepositProductData fixedDepositProductData = (FixedDepositProductData) this.depositProductReadPlatformService
                 .retrieveOne(DepositAccountType.FIXED_DEPOSIT, productId);
 
-        final Collection<ChargeData> charges = this.chargeReadPlatformService.retrieveSavingsProductCharges(productId);
+        final Collection<ChargeData> charges = this.chargeReadService.retrieveProductCharges(productId);
         fixedDepositProductData = FixedDepositProductData.withCharges(fixedDepositProductData, charges);
 
         final Collection<InterestRateChartData> charts = this.chartReadPlatformService.retrieveAllWithSlabsWithTemplate(productId);
@@ -217,14 +215,14 @@ public class FixedDepositProductsApiResource {
         final ApiRequestJsonSerializationSettings settings = this.apiRequestParameterHelper.process(uriInfo.getQueryParameters());
 
         if (fixedDepositProductData.hasAccountingEnabled()) {
-            final Map<String, Object> accountingMappings = this.accountMappingReadPlatformService
-                    .fetchAccountMappingDetailsForSavingsProduct(productId, fixedDepositProductData.accountingRuleTypeId());
-            final Collection<PaymentTypeToGLAccountMapper> paymentChannelToFundSourceMappings = this.accountMappingReadPlatformService
-                    .fetchPaymentTypeToFundSourceMappingsForSavingsProduct(productId);
-            Collection<ChargeToGLAccountMapper> feeToGLAccountMappings = this.accountMappingReadPlatformService
-                    .fetchFeeToIncomeAccountMappingsForSavingsProduct(productId);
-            Collection<ChargeToGLAccountMapper> penaltyToGLAccountMappings = this.accountMappingReadPlatformService
-                    .fetchPenaltyToIncomeAccountMappingsForSavingsProduct(productId);
+            final Map<String, Object> accountingMappings = this.accountingReadService.fetchAccountMappingDetails(productId,
+                    fixedDepositProductData.accountingRuleTypeId());
+            final Collection<PaymentTypeToGLAccountMapper> paymentChannelToFundSourceMappings = this.accountingReadService
+                    .fetchPaymentTypeToFundSourceMappings(productId);
+            Collection<ChargeToGLAccountMapper> feeToGLAccountMappings = this.accountingReadService
+                    .fetchFeeToIncomeAccountMappings(productId);
+            Collection<ChargeToGLAccountMapper> penaltyToGLAccountMappings = this.accountingReadService
+                    .fetchPenaltyToIncomeAccountMappings(productId);
             fixedDepositProductData = FixedDepositProductData.withAccountingDetails(fixedDepositProductData, accountingMappings,
                     paymentChannelToFundSourceMappings, feeToGLAccountMappings, penaltyToGLAccountMappings);
         }
@@ -295,11 +293,9 @@ public class FixedDepositProductsApiResource {
 
         final Collection<PaymentTypeData> paymentTypeOptions = this.paymentTypeReadPlatformService.retrieveAllPaymentTypes();
 
-        final Collection<EnumOptionData> accountingRuleOptions = this.accountingDropdownReadPlatformService
-                .retrieveAccountingRuleTypeOptions();
+        final Collection<EnumOptionData> accountingRuleOptions = this.accountingReadService.retrieveAccountingRuleTypeOptions();
 
-        final Map<String, List<GLAccountData>> accountingMappingOptions = this.accountingDropdownReadPlatformService
-                .retrieveAccountMappingOptionsForSavingsProducts();
+        final Map<String, List<GLAccountData>> accountingMappingOptions = this.accountingReadService.retrieveAccountMappingOptions();
 
         final Collection<EnumOptionData> preClosurePenalInterestOnTypeOptions = this.depositsDropdownReadPlatformService
                 .retrievePreClosurePenalInterestOnTypeOptions();
@@ -308,13 +304,13 @@ public class FixedDepositProductsApiResource {
 
         // charges
         final boolean feeChargesOnly = true;
-        Collection<ChargeData> chargeOptions = this.chargeReadPlatformService.retrieveSavingsProductApplicableCharges(feeChargesOnly);
+        Collection<ChargeData> chargeOptions = this.chargeReadService.retrieveApplicableCharges(feeChargesOnly);
         chargeOptions = CollectionUtils.isEmpty(chargeOptions) ? null : chargeOptions;
 
-        Collection<ChargeData> penaltyOptions = this.chargeReadPlatformService.retrieveSavingsApplicablePenalties();
+        Collection<ChargeData> penaltyOptions = this.chargeReadService.retrieveApplicablePenalties();
         penaltyOptions = CollectionUtils.isEmpty(penaltyOptions) ? null : penaltyOptions;
 
-        final Collection<TaxGroupData> taxGroupOptions = this.taxReadPlatformService.retrieveTaxGroupsForLookUp();
+        final Collection<TaxGroupData> taxGroupOptions = this.taxReadService.retrieveTaxGroupsForLookUp();
 
         // interest rate chart template
         final InterestRateChartData chartTemplate = this.interestRateChartReadPlatformService.template();

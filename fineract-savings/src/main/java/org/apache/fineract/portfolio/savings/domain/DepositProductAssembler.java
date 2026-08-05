@@ -177,8 +177,14 @@ public class DepositProductAssembler {
 
         FixedDepositProduct fixedDepositProduct = FixedDepositProduct.createNew(name, shortName, description, currency, interestRate,
                 interestCompoundingPeriodType, interestPostingPeriodType, interestCalculationType, interestCalculationDaysInYearType,
-                lockinPeriodFrequency, lockinPeriodFrequencyType, accountingRuleType, charges, productTermAndPreClosure, charts,
-                minBalanceForInterestCalculation, withHoldTax, taxGroup);
+                lockinPeriodFrequency, lockinPeriodFrequencyType, accountingRuleType, productTermAndPreClosure, charts,
+                minBalanceForInterestCalculation, withHoldTax);
+
+        // charges and the tax group are savings product state; applied here so the fixed deposit entity does not have
+        // to
+        // name the charge or tax domain types
+        fixedDepositProduct.update(charges);
+        fixedDepositProduct.setTaxGroup(taxGroup);
 
         // update product reference
         productTermAndPreClosure.updateProductReference(fixedDepositProduct);
@@ -429,6 +435,24 @@ public class DepositProductAssembler {
         }
 
         return DepositRecurringDetail.createFrom(isMandatoryDeposit, allowWithdrawal, adjustAdvanceTowardsFuturePayments);
+    }
+
+    /**
+     * Applies the charges named in the command to the product. Deposit product write services call this instead of
+     * assembling {@link Charge} entities themselves, so the charge domain stays behind the savings module.
+     *
+     * @return {@code true} when the product's charges actually changed
+     */
+    public boolean updateSavingsProductCharges(final SavingsProduct product, final JsonCommand command) {
+        return product.update(assembleListOfSavingsProductCharges(command, product.currency().getCode()));
+    }
+
+    /**
+     * Applies the tax group named in the command to the product. Deposit product write services call this instead of
+     * resolving {@link TaxGroup} entities themselves, so the tax domain stays behind the savings module.
+     */
+    public void updateTaxGroup(final SavingsProduct product, final JsonCommand command) {
+        product.setTaxGroup(assembleTaxGroup(command));
     }
 
     public Set<Charge> assembleListOfSavingsProductCharges(final JsonCommand command, final String savingsProductCurrencyCode) {

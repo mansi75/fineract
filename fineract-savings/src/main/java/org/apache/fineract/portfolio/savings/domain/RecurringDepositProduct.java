@@ -92,8 +92,13 @@ public class RecurringDepositProduct extends FixedDepositProduct {
 
         super(name, shortName, description, currency, interestRate, interestCompoundingPeriodType, interestPostingPeriodType,
                 interestCalculationType, interestCalculationDaysInYearType, minRequiredOpeningBalance, lockinPeriodFrequency,
-                lockinPeriodFrequencyType, withdrawalFeeApplicableForTransfer, accountingRuleType, charges, productTermAndPreClosure,
-                charts, allowOverdraft, overdraftLimit, minBalanceForInterestCalculation, withHoldTax, taxGroup);
+                lockinPeriodFrequencyType, withdrawalFeeApplicableForTransfer, accountingRuleType, productTermAndPreClosure, charts,
+                allowOverdraft, overdraftLimit, minBalanceForInterestCalculation, withHoldTax);
+
+        // the fixed deposit base type no longer carries charges / tax group across the boundary, so apply the savings
+        // product state here
+        update(charges);
+        setTaxGroup(taxGroup);
 
         this.recurringDetail = recurringDetail;
     }

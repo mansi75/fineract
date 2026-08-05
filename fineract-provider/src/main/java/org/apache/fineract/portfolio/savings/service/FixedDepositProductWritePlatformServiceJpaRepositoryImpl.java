@@ -27,11 +27,9 @@ import jakarta.persistence.PersistenceException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.fineract.accounting.producttoaccountmapping.service.ProductToGLAccountMappingWritePlatformService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
@@ -40,16 +38,14 @@ import org.apache.fineract.infrastructure.core.data.DataValidatorBuilder;
 import org.apache.fineract.infrastructure.core.exception.ErrorHandler;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
-import org.apache.fineract.portfolio.charge.domain.Charge;
+import org.apache.fineract.portfolio.fixeddeposit.contract.FixedDepositAccountingWriteService;
 import org.apache.fineract.portfolio.interestratechart.service.InterestRateChartAssembler;
-import org.apache.fineract.portfolio.savings.DepositAccountType;
 import org.apache.fineract.portfolio.savings.SavingsApiConstants;
 import org.apache.fineract.portfolio.savings.data.DepositProductDataValidator;
 import org.apache.fineract.portfolio.savings.domain.DepositProductAssembler;
 import org.apache.fineract.portfolio.savings.domain.FixedDepositProduct;
 import org.apache.fineract.portfolio.savings.domain.FixedDepositProductRepository;
 import org.apache.fineract.portfolio.savings.exception.FixedDepositProductNotFoundException;
-import org.apache.fineract.portfolio.tax.domain.TaxGroup;
 import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,7 +57,7 @@ public class FixedDepositProductWritePlatformServiceJpaRepositoryImpl implements
     private final FixedDepositProductRepository fixedDepositProductRepository;
     private final DepositProductDataValidator fromApiJsonDataValidator;
     private final DepositProductAssembler depositProductAssembler;
-    private final ProductToGLAccountMappingWritePlatformService accountMappingWritePlatformService;
+    private final FixedDepositAccountingWriteService accountingWriteService;
     private final InterestRateChartAssembler chartAssembler;
 
     @Transactional
@@ -76,8 +72,7 @@ public class FixedDepositProductWritePlatformServiceJpaRepositoryImpl implements
             this.fixedDepositProductRepository.saveAndFlush(product);
 
             // save accounting mappings
-            this.accountMappingWritePlatformService.createSavingProductToGLAccountMapping(product.getId(), command,
-                    DepositAccountType.FIXED_DEPOSIT);
+            this.accountingWriteService.createProductToGLAccountMapping(product.getId(), command);
 
             return new CommandProcessingResultBuilder() //
                     .withEntityId(product.getId()) //
@@ -104,17 +99,14 @@ public class FixedDepositProductWritePlatformServiceJpaRepositoryImpl implements
             final Map<String, Object> changes = product.update(command);
 
             if (changes.containsKey(chargesParamName)) {
-                final Set<Charge> savingsProductCharges = this.depositProductAssembler.assembleListOfSavingsProductCharges(command,
-                        product.currency().getCode());
-                final boolean updated = product.update(savingsProductCharges);
+                final boolean updated = this.depositProductAssembler.updateSavingsProductCharges(product, command);
                 if (!updated) {
                     changes.remove(chargesParamName);
                 }
             }
 
             if (changes.containsKey(taxGroupIdParamName)) {
-                final TaxGroup taxGroup = this.depositProductAssembler.assembleTaxGroup(command);
-                product.setTaxGroup(taxGroup);
+                this.depositProductAssembler.updateTaxGroup(product, command);
                 if (product.withHoldTax() && product.getTaxGroup() == null) {
                     final List<ApiParameterError> dataValidationErrors = new ArrayList<>();
                     final DataValidatorBuilder baseDataValidator = new DataValidatorBuilder(dataValidationErrors)
@@ -127,9 +119,8 @@ public class FixedDepositProductWritePlatformServiceJpaRepositoryImpl implements
 
             // accounting related changes
             final boolean accountingTypeChanged = changes.containsKey(accountingRuleParamName);
-            final Map<String, Object> accountingMappingChanges = this.accountMappingWritePlatformService
-                    .updateSavingsProductToGLAccountMapping(product.getId(), command, accountingTypeChanged, product.getAccountingType(),
-                            DepositAccountType.FIXED_DEPOSIT);
+            final Map<String, Object> accountingMappingChanges = this.accountingWriteService
+                    .updateProductToGLAccountMapping(product.getId(), command, accountingTypeChanged, product.getAccountingType());
             changes.putAll(accountingMappingChanges);
 
             if (!changes.isEmpty()) {

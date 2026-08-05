@@ -40,6 +40,7 @@ import org.apache.fineract.portfolio.account.service.AccountTransfersReadPlatfor
 import org.apache.fineract.portfolio.account.service.AccountTransfersReadPlatformServiceImpl;
 import org.apache.fineract.portfolio.account.service.AccountTransfersWritePlatformService;
 import org.apache.fineract.portfolio.account.service.AccountTransfersWritePlatformServiceImpl;
+import org.apache.fineract.portfolio.account.service.FixedDepositAccountAssociationReadServiceImpl;
 import org.apache.fineract.portfolio.account.service.PortfolioAccountReadPlatformService;
 import org.apache.fineract.portfolio.account.service.PortfolioAccountReadPlatformServiceImpl;
 import org.apache.fineract.portfolio.account.service.StandingInstructionHistoryReadService;
@@ -50,6 +51,7 @@ import org.apache.fineract.portfolio.account.service.StandingInstructionWritePla
 import org.apache.fineract.portfolio.account.service.StandingInstructionWritePlatformServiceImpl;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
 import org.apache.fineract.portfolio.common.service.DropdownReadPlatformService;
+import org.apache.fineract.portfolio.fixeddeposit.contract.FixedDepositAccountAssociationReadService;
 import org.apache.fineract.portfolio.loanaccount.domain.LoanAccountDomainService;
 import org.apache.fineract.portfolio.loanaccount.service.LoanAssembler;
 import org.apache.fineract.portfolio.loanaccount.service.LoanReadPlatformService;
@@ -70,6 +72,13 @@ public class AccountConfiguration {
     @ConditionalOnMissingBean(AccountAssociationsReadPlatformService.class)
     public AccountAssociationsReadPlatformService accountAssociationsReadPlatformService(JdbcTemplate jdbcTemplate) {
         return new AccountAssociationsReadPlatformServiceImpl(jdbcTemplate);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(FixedDepositAccountAssociationReadService.class)
+    public FixedDepositAccountAssociationReadService fixedDepositAccountAssociationReadService(
+            AccountAssociationsReadPlatformService accountAssociationsReadPlatformService) {
+        return new FixedDepositAccountAssociationReadServiceImpl(accountAssociationsReadPlatformService);
     }
 
     @Bean

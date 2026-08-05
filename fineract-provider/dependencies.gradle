@@ -227,6 +227,8 @@ dependencies {
         exclude group: 'org.skyscreamer'
     }
     testImplementation ('org.mockito:mockito-inline')
+    // used by FixedDepositCrossFeatureBoundaryTest to verify the fixed deposit cross-feature boundary
+    testImplementation ('com.tngtech.archunit:archunit:1.4.2')
 
     testRuntimeOnly(
             'org.mariadb.jdbc:mariadb-java-client',

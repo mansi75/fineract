@@ -58,6 +58,7 @@ import org.apache.fineract.portfolio.charge.service.ChargeReadPlatformService;
 import org.apache.fineract.portfolio.client.domain.ClientRepositoryWrapper;
 import org.apache.fineract.portfolio.client.service.ClientReadPlatformService;
 import org.apache.fineract.portfolio.common.service.DropdownReadPlatformService;
+import org.apache.fineract.portfolio.fixeddeposit.contract.FixedDepositAccountingWriteService;
 import org.apache.fineract.portfolio.group.domain.GroupRepository;
 import org.apache.fineract.portfolio.group.domain.GroupRepositoryWrapper;
 import org.apache.fineract.portfolio.group.service.GroupReadPlatformService;
@@ -290,10 +291,10 @@ public class SavingsConfiguration {
     @ConditionalOnMissingBean(FixedDepositProductWritePlatformService.class)
     public FixedDepositProductWritePlatformService fixedDepositProductWritePlatformService(PlatformSecurityContext context,
             FixedDepositProductRepository fixedDepositProductRepository, DepositProductDataValidator fromApiJsonDataValidator,
-            DepositProductAssembler depositProductAssembler,
-            ProductToGLAccountMappingWritePlatformService accountMappingWritePlatformService, InterestRateChartAssembler chartAssembler) {
+            DepositProductAssembler depositProductAssembler, FixedDepositAccountingWriteService accountingWriteService,
+            InterestRateChartAssembler chartAssembler) {
         return new FixedDepositProductWritePlatformServiceJpaRepositoryImpl(context, fixedDepositProductRepository,
-                fromApiJsonDataValidator, depositProductAssembler, accountMappingWritePlatformService, chartAssembler);
+                fromApiJsonDataValidator, depositProductAssembler, accountingWriteService, chartAssembler);
     }
 
     @Bean

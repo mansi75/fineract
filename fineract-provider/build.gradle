@@ -145,6 +145,14 @@ dependencies {
 
 apply from: 'dependencies.gradle'
 
+test {
+    // FixedDepositCrossFeatureBoundaryTest imports every org.apache.fineract class with ArchUnit
+    maxHeapSize = '2g'
+    jvmArgs += ['-XX:MaxMetaspaceSize=1g']
+    // -Pfixeddeposit.boundary.report=true switches on that test's dependency report
+    systemProperty 'fixeddeposit.boundary.report', findProperty('fixeddeposit.boundary.report') ?: 'false'
+}
+
 // Configuration for the modernizer plugin
 // https://github.com/andygoossens/gradle-modernizer-plugin
 modernizer {
