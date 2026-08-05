@@ -19,10 +19,11 @@
 package org.apache.fineract.organisation.provisioning.starter;
 
 import org.apache.fineract.accounting.glaccount.domain.GLAccountRepository;
-import org.apache.fineract.accounting.glaccount.service.GLAccountReadPlatformService;
-import org.apache.fineract.accounting.provisioning.service.ProvisioningEntriesReadPlatformService;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
+import org.apache.fineract.organisation.provisioning.contract.ProvisioningEntryReadService;
+import org.apache.fineract.organisation.provisioning.contract.ProvisioningGLAccountReadService;
+import org.apache.fineract.organisation.provisioning.contract.ProvisioningLoanProductReadService;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCategoryRepository;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCriteriaRepository;
 import org.apache.fineract.organisation.provisioning.serialization.ProvisioningCategoryDefinitionJsonDeserializer;
@@ -36,8 +37,6 @@ import org.apache.fineract.organisation.provisioning.service.ProvisioningCriteri
 import org.apache.fineract.organisation.provisioning.service.ProvisioningCriteriaReadPlatformServiceImpl;
 import org.apache.fineract.organisation.provisioning.service.ProvisioningCriteriaWritePlatformService;
 import org.apache.fineract.organisation.provisioning.service.ProvisioningCriteriaWritePlatformServiceJpaRepositoryImpl;
-import org.apache.fineract.portfolio.loanproduct.domain.LoanProductRepository;
-import org.apache.fineract.portfolio.loanproduct.service.LoanProductReadPlatformService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -64,9 +63,10 @@ public class OrganisationProvisioningConfiguration {
     @Bean
     @ConditionalOnMissingBean(ProvisioningCriteriaAssembler.class)
     public ProvisioningCriteriaAssembler provisioningCriteriaAssembler(FromJsonHelper fromApiJsonHelper,
-            ProvisioningCategoryRepository provisioningCategoryRepository, LoanProductRepository loanProductRepository,
-            GLAccountRepository glAccountRepository, PlatformSecurityContext platformSecurityContext) {
-        return new ProvisioningCriteriaAssembler(fromApiJsonHelper, provisioningCategoryRepository, loanProductRepository,
+            ProvisioningCategoryRepository provisioningCategoryRepository,
+            ProvisioningLoanProductReadService provisioningLoanProductReadService, GLAccountRepository glAccountRepository,
+            PlatformSecurityContext platformSecurityContext) {
+        return new ProvisioningCriteriaAssembler(fromApiJsonHelper, provisioningCategoryRepository, provisioningLoanProductReadService,
                 glAccountRepository, platformSecurityContext);
     }
 
@@ -74,10 +74,10 @@ public class OrganisationProvisioningConfiguration {
     @ConditionalOnMissingBean(ProvisioningCriteriaReadPlatformService.class)
     public ProvisioningCriteriaReadPlatformService provisioningCriteriaReadPlatformService(JdbcTemplate jdbcTemplate,
             ProvisioningCategoryReadPlatformService provisioningCategoryReadPlatformService,
-            LoanProductReadPlatformService loanProductReadPlatformService, GLAccountReadPlatformService glAccountReadPlatformService,
-            LoanProductReadPlatformService loanProductReaPlatformService) {
+            ProvisioningLoanProductReadService provisioningLoanProductReadService,
+            ProvisioningGLAccountReadService provisioningGLAccountReadService) {
         return new ProvisioningCriteriaReadPlatformServiceImpl(jdbcTemplate, provisioningCategoryReadPlatformService,
-                loanProductReadPlatformService, glAccountReadPlatformService, loanProductReaPlatformService);
+                provisioningLoanProductReadService, provisioningGLAccountReadService);
     }
 
     @Bean
@@ -86,9 +86,9 @@ public class OrganisationProvisioningConfiguration {
             ProvisioningCriteriaDefinitionJsonDeserializer fromApiJsonDeserializer,
             ProvisioningCriteriaAssembler provisioningCriteriaAssembler, ProvisioningCriteriaRepository provisioningCriteriaRepository,
             FromJsonHelper fromApiJsonHelper, GLAccountRepository glAccountRepository,
-            ProvisioningEntriesReadPlatformService provisioningEntriesReadPlatformService) {
+            ProvisioningEntryReadService provisioningEntryReadService) {
         return new ProvisioningCriteriaWritePlatformServiceJpaRepositoryImpl(fromApiJsonDeserializer, provisioningCriteriaAssembler,
-                provisioningCriteriaRepository, fromApiJsonHelper, glAccountRepository, provisioningEntriesReadPlatformService);
+                provisioningCriteriaRepository, fromApiJsonHelper, glAccountRepository, provisioningEntryReadService);
     }
 
 }

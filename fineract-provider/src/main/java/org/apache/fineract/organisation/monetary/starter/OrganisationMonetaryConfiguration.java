@@ -18,6 +18,8 @@
  */
 package org.apache.fineract.organisation.monetary.starter;
 
+import java.util.List;
+import org.apache.fineract.organisation.monetary.contract.CurrencyInUseChecker;
 import org.apache.fineract.organisation.monetary.domain.ApplicationCurrencyRepositoryWrapper;
 import org.apache.fineract.organisation.monetary.domain.OrganisationCurrencyRepository;
 import org.apache.fineract.organisation.monetary.service.CurrencyReadPlatformService;
@@ -26,9 +28,6 @@ import org.apache.fineract.organisation.monetary.service.CurrencyWritePlatformSe
 import org.apache.fineract.organisation.monetary.service.CurrencyWritePlatformServiceJpaRepositoryImpl;
 import org.apache.fineract.organisation.monetary.service.OrganisationCurrencyReadPlatformService;
 import org.apache.fineract.organisation.monetary.service.OrganisationCurrencyReadPlatformServiceImpl;
-import org.apache.fineract.portfolio.charge.service.ChargeReadPlatformService;
-import org.apache.fineract.portfolio.loanproduct.service.LoanProductReadPlatformService;
-import org.apache.fineract.portfolio.savings.service.SavingsProductReadPlatformService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,10 +45,9 @@ public class OrganisationMonetaryConfiguration {
     @Bean
     @ConditionalOnMissingBean(CurrencyWritePlatformService.class)
     public CurrencyWritePlatformService currencyWritePlatformService(ApplicationCurrencyRepositoryWrapper applicationCurrencyRepository,
-            OrganisationCurrencyRepository organisationCurrencyRepository, LoanProductReadPlatformService loanProductService,
-            SavingsProductReadPlatformService savingsProductService, ChargeReadPlatformService chargeService) {
+            OrganisationCurrencyRepository organisationCurrencyRepository, List<CurrencyInUseChecker> currencyInUseCheckers) {
         return new CurrencyWritePlatformServiceJpaRepositoryImpl(applicationCurrencyRepository, organisationCurrencyRepository,
-                loanProductService, savingsProductService, chargeService);
+                currencyInUseCheckers);
     }
 
     @Bean

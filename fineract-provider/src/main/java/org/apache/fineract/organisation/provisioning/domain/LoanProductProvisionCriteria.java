@@ -18,13 +18,13 @@
  */
 package org.apache.fineract.organisation.provisioning.domain;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import org.apache.fineract.infrastructure.core.domain.AbstractPersistableCustom;
-import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
 
 @Entity
 @Table(name = "m_loanproduct_provisioning_mapping", uniqueConstraints = {
@@ -35,20 +35,19 @@ public class LoanProductProvisionCriteria extends AbstractPersistableCustom<Long
     @JoinColumn(name = "criteria_id", referencedColumnName = "id", nullable = false)
     private ProvisioningCriteria criteria;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "product_id", referencedColumnName = "id", nullable = false)
-    private LoanProduct loanProduct;
+    @Column(name = "product_id", nullable = false)
+    private Long loanProductId;
 
     protected LoanProductProvisionCriteria() {
 
     }
 
-    public LoanProductProvisionCriteria(ProvisioningCriteria criteria, LoanProduct loanProduct) {
+    public LoanProductProvisionCriteria(ProvisioningCriteria criteria, Long loanProductId) {
         this.criteria = criteria;
-        this.loanProduct = loanProduct;
+        this.loanProductId = loanProductId;
     }
 
-    public LoanProduct getLoanProduct() {
-        return this.loanProduct;
+    public Long getLoanProductId() {
+        return this.loanProductId;
     }
 }

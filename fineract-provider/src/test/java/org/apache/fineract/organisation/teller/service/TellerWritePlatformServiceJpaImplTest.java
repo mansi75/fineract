@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
@@ -40,11 +39,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.apache.fineract.accounting.financialactivityaccount.domain.FinancialActivityAccount;
-import org.apache.fineract.accounting.financialactivityaccount.domain.FinancialActivityAccountRepositoryWrapper;
-import org.apache.fineract.accounting.glaccount.domain.GLAccount;
-import org.apache.fineract.accounting.journalentry.domain.JournalEntry;
-import org.apache.fineract.accounting.journalentry.domain.JournalEntryRepository;
 import org.apache.fineract.infrastructure.businessdate.domain.BusinessDateType;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
@@ -56,6 +50,8 @@ import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
 import org.apache.fineract.organisation.staff.domain.Staff;
 import org.apache.fineract.organisation.staff.domain.StaffRepository;
 import org.apache.fineract.organisation.staff.exception.StaffNotFoundException;
+import org.apache.fineract.organisation.teller.contract.CashierTransactionJournalEntryData;
+import org.apache.fineract.organisation.teller.contract.TellerJournalEntryWriteService;
 import org.apache.fineract.organisation.teller.data.CashierTransactionDataValidator;
 import org.apache.fineract.organisation.teller.domain.Cashier;
 import org.apache.fineract.organisation.teller.domain.CashierRepository;
@@ -116,10 +112,7 @@ public class TellerWritePlatformServiceJpaImplTest {
     private CashierTransactionRepository cashierTxnRepository;
 
     @Mock
-    private FinancialActivityAccountRepositoryWrapper financialActivityAccountRepositoryWrapper;
-
-    @Mock
-    private JournalEntryRepository glJournalEntryRepository;
+    private TellerJournalEntryWriteService tellerJournalEntryWriteService;
 
     @InjectMocks
     private TellerWritePlatformServiceJpaImpl underTest;
@@ -401,7 +394,8 @@ public class TellerWritePlatformServiceJpaImplTest {
 
             verify(fromApiJsonDeserializer, times(1)).validateForCashTxnForCashier(any());
             verify(cashierTxnRepository, times(1)).save(any(CashierTransaction.class));
-            verify(glJournalEntryRepository, times(2)).saveAndFlush(any(JournalEntry.class));
+            verify(tellerJournalEntryWriteService, times(1))
+                    .createCashierAllocationJournalEntries(any(CashierTransactionJournalEntryData.class));
             assertNotNull(result);
             assertEquals(1L, result.getCommandId());
             assertEquals(1L, result.getResourceId());
@@ -431,7 +425,8 @@ public class TellerWritePlatformServiceJpaImplTest {
             verify(cashierTransactionDataValidator, times(1)).validateSettleCashAndCashOutTransactions(anyLong(), any(JsonCommand.class));
             verify(fromApiJsonDeserializer, times(1)).validateForCashTxnForCashier(any());
             verify(cashierTxnRepository, times(1)).save(any(CashierTransaction.class));
-            verify(glJournalEntryRepository, times(2)).saveAndFlush(any(JournalEntry.class));
+            verify(tellerJournalEntryWriteService, times(1))
+                    .createCashierSettlementJournalEntries(any(CashierTransactionJournalEntryData.class));
             assertNotNull(result);
             assertEquals(1L, result.getCommandId());
             assertEquals(1L, result.getResourceId());
@@ -444,11 +439,6 @@ public class TellerWritePlatformServiceJpaImplTest {
         when(command.stringValueOfParameterNamed("entityType")).thenReturn("loan account");
         when(cashierTxnRepository.save(any(CashierTransaction.class))).thenReturn(cashierTxn);
 
-        FinancialActivityAccount financialActivityAccount = mock(FinancialActivityAccount.class);
-        when(financialActivityAccountRepositoryWrapper.findByFinancialActivityTypeWithNotFoundDetection(anyInt())).thenReturn(financialActivityAccount);
-
-        GLAccount glAccount = mock(GLAccount.class);
-        when(financialActivityAccount.getGlAccount()).thenReturn(glAccount);
         when(cashier.getTeller()).thenReturn(teller);
         when(teller.getOffice()).thenReturn(office);
 
@@ -459,9 +449,6 @@ public class TellerWritePlatformServiceJpaImplTest {
         lenient().when(cashierTxn.getTxnDate()).thenReturn(LocalDate.of(2026, 1, 1));
         lenient().when(cashierTxn.getTxnAmount()).thenReturn(BigDecimal.valueOf(100));
         lenient().when(cashierTxn.getTxnNote()).thenReturn("CASHIER ALLOCATION");
-
-        JournalEntry journalEntry = mock(JournalEntry.class);
-        when(glJournalEntryRepository.saveAndFlush(any(JournalEntry.class))).thenReturn(journalEntry);
 
         when(command.commandId()).thenReturn(1L);
         when(cashier.getId()).thenReturn(1L);

@@ -19,6 +19,8 @@
 package org.apache.fineract.portfolio.loanproduct.service;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import org.apache.fineract.infrastructure.core.domain.ExternalId;
 import org.apache.fineract.portfolio.loanproduct.data.AdvancedPaymentData;
 import org.apache.fineract.portfolio.loanproduct.data.CreditAllocationData;
@@ -35,6 +37,8 @@ public interface LoanProductReadPlatformService {
     Collection<LoanProductData> retrieveAllLoanProductsForLookup();
 
     Collection<LoanProductData> retrieveAllLoanProductsForLookup(boolean activeOnly);
+
+    List<LoanProductData> retrieveLoanProductsForLookup(Set<Long> loanProductIds);
 
     LoanProductData retrieveLoanProduct(Long productId);
 

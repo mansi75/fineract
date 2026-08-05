@@ -24,13 +24,6 @@ import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.fineract.accounting.common.AccountingConstants.FinancialActivity;
-import org.apache.fineract.accounting.financialactivityaccount.domain.FinancialActivityAccount;
-import org.apache.fineract.accounting.financialactivityaccount.domain.FinancialActivityAccountRepositoryWrapper;
-import org.apache.fineract.accounting.glaccount.domain.GLAccount;
-import org.apache.fineract.accounting.journalentry.domain.JournalEntry;
-import org.apache.fineract.accounting.journalentry.domain.JournalEntryRepository;
-import org.apache.fineract.accounting.journalentry.domain.JournalEntryType;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResultBuilder;
@@ -43,6 +36,8 @@ import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
 import org.apache.fineract.organisation.staff.domain.Staff;
 import org.apache.fineract.organisation.staff.domain.StaffRepository;
 import org.apache.fineract.organisation.staff.exception.StaffNotFoundException;
+import org.apache.fineract.organisation.teller.contract.CashierTransactionJournalEntryData;
+import org.apache.fineract.organisation.teller.contract.TellerJournalEntryWriteService;
 import org.apache.fineract.organisation.teller.data.CashierTransactionDataValidator;
 import org.apache.fineract.organisation.teller.domain.Cashier;
 import org.apache.fineract.organisation.teller.domain.CashierRepository;
@@ -70,8 +65,7 @@ public class TellerWritePlatformServiceJpaImpl implements TellerWritePlatformSer
     private final StaffRepository staffRepository;
     private final CashierRepository cashierRepository;
     private final CashierTransactionRepository cashierTxnRepository;
-    private final JournalEntryRepository glJournalEntryRepository;
-    private final FinancialActivityAccountRepositoryWrapper financialActivityAccountRepositoryWrapper;
+    private final TellerJournalEntryWriteService tellerJournalEntryWriteService;
     private final CashierTransactionDataValidator cashierTransactionDataValidator;
 
     @Override
@@ -384,53 +378,21 @@ public class TellerWritePlatformServiceJpaImpl implements TellerWritePlatformSer
 
             this.cashierTxnRepository.save(cashierTxn);
 
-            // Pass the journal entries
-            FinancialActivityAccount mainVaultFinancialActivityAccount = this.financialActivityAccountRepositoryWrapper
-                    .findByFinancialActivityTypeWithNotFoundDetection(FinancialActivity.CASH_AT_MAINVAULT.getValue());
-            FinancialActivityAccount tellerCashFinancialActivityAccount = this.financialActivityAccountRepositoryWrapper
-                    .findByFinancialActivityTypeWithNotFoundDetection(FinancialActivity.CASH_AT_TELLER.getValue());
-            GLAccount creditAccount = null;
-            GLAccount debitAccount = null;
-            if (txnType.equals(CashierTxnType.ALLOCATE)) {
-                debitAccount = tellerCashFinancialActivityAccount.getGlAccount();
-                creditAccount = mainVaultFinancialActivityAccount.getGlAccount();
-            } else if (txnType.equals(CashierTxnType.SETTLE)) {
-                debitAccount = mainVaultFinancialActivityAccount.getGlAccount();
-                creditAccount = tellerCashFinancialActivityAccount.getGlAccount();
-            }
-
             final Office cashierOffice = cashier.getTeller().getOffice();
 
             final Long time = System.currentTimeMillis();
             final String uniqueVal = String.valueOf(time) + currentUser.getId() + cashierOffice.getId();
             final String transactionId = Long.toHexString(Long.parseLong(uniqueVal));
 
-            final JournalEntry debitJournalEntry = JournalEntry.createNew(cashierOffice, null, // payment
-                                                                                               // detail
-                    debitAccount, cashierTxn.getCurrencyCode(),
-
-                    transactionId, false, // manual entry
-                    cashierTxn.getTxnDate(), JournalEntryType.DEBIT, cashierTxn.getTxnAmount(), cashierTxn.getTxnNote(), // Description
-                    null, null, null, // entity Type, entityId, reference number
-                    null, null, null, null); // Loan
-                                             // and
-                                             // Savings
-                                             // Txn
-
-            final JournalEntry creditJournalEntry = JournalEntry.createNew(cashierOffice, null, // payment
-                                                                                                // detail
-                    creditAccount, cashierTxn.getCurrencyCode(),
-
-                    transactionId, false, // manual entry
-                    cashierTxn.getTxnDate(), JournalEntryType.CREDIT, cashierTxn.getTxnAmount(), cashierTxn.getTxnNote(), // Description
-                    null, null, null, // entity Type, entityId, reference number
-                    null, null, null, null); // Loan
-                                             // and
-                                             // Savings
-                                             // Txn
-
-            this.glJournalEntryRepository.saveAndFlush(debitJournalEntry);
-            this.glJournalEntryRepository.saveAndFlush(creditJournalEntry);
+            // Pass the journal entries
+            final CashierTransactionJournalEntryData journalEntryData = new CashierTransactionJournalEntryData(cashierOffice.getId(),
+                    cashierTxn.getCurrencyCode(), transactionId, cashierTxn.getTxnDate(), cashierTxn.getTxnAmount(),
+                    cashierTxn.getTxnNote());
+            if (txnType.equals(CashierTxnType.ALLOCATE)) {
+                this.tellerJournalEntryWriteService.createCashierAllocationJournalEntries(journalEntryData);
+            } else if (txnType.equals(CashierTxnType.SETTLE)) {
+                this.tellerJournalEntryWriteService.createCashierSettlementJournalEntries(journalEntryData);
+            }
 
             return new CommandProcessingResultBuilder() //
                     .withCommandId(command.commandId()) //

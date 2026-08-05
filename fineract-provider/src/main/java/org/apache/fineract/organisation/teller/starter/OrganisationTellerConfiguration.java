@@ -18,8 +18,6 @@
  */
 package org.apache.fineract.organisation.teller.starter;
 
-import org.apache.fineract.accounting.financialactivityaccount.domain.FinancialActivityAccountRepositoryWrapper;
-import org.apache.fineract.accounting.journalentry.domain.JournalEntryRepository;
 import org.apache.fineract.infrastructure.core.service.PaginationHelper;
 import org.apache.fineract.infrastructure.core.service.database.DatabaseSpecificSQLGenerator;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
@@ -29,6 +27,7 @@ import org.apache.fineract.organisation.office.domain.OfficeRepositoryWrapper;
 import org.apache.fineract.organisation.office.service.OfficeReadPlatformService;
 import org.apache.fineract.organisation.staff.domain.StaffRepository;
 import org.apache.fineract.organisation.staff.service.StaffReadService;
+import org.apache.fineract.organisation.teller.contract.TellerJournalEntryWriteService;
 import org.apache.fineract.organisation.teller.data.CashierTransactionDataValidator;
 import org.apache.fineract.organisation.teller.domain.CashierRepository;
 import org.apache.fineract.organisation.teller.domain.CashierTransactionRepository;
@@ -61,11 +60,9 @@ public class OrganisationTellerConfiguration {
     public TellerWritePlatformService tellerWritePlatformService(PlatformSecurityContext context,
             TellerCommandFromApiJsonDeserializer fromApiJsonDeserializer, TellerRepositoryWrapper tellerRepositoryWrapper,
             OfficeRepositoryWrapper officeRepositoryWrapper, StaffRepository staffRepository, CashierRepository cashierRepository,
-            CashierTransactionRepository cashierTxnRepository, JournalEntryRepository glJournalEntryRepository,
-            FinancialActivityAccountRepositoryWrapper financialActivityAccountRepositoryWrapper,
+            CashierTransactionRepository cashierTxnRepository, TellerJournalEntryWriteService tellerJournalEntryWriteService,
             CashierTransactionDataValidator cashierTransactionDataValidator) {
         return new TellerWritePlatformServiceJpaImpl(context, fromApiJsonDeserializer, tellerRepositoryWrapper, officeRepositoryWrapper,
-                staffRepository, cashierRepository, cashierTxnRepository, glJournalEntryRepository,
-                financialActivityAccountRepositoryWrapper, cashierTransactionDataValidator);
+                staffRepository, cashierRepository, cashierTxnRepository, tellerJournalEntryWriteService, cashierTransactionDataValidator);
     }
 }

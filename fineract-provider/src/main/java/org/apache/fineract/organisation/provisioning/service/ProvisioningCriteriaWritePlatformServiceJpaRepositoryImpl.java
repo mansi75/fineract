@@ -31,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.fineract.accounting.glaccount.domain.GLAccount;
 import org.apache.fineract.accounting.glaccount.domain.GLAccountRepository;
-import org.apache.fineract.accounting.provisioning.service.ProvisioningEntriesReadPlatformService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.data.ApiParameterError;
 import org.apache.fineract.infrastructure.core.data.CommandProcessingResult;
@@ -41,6 +40,7 @@ import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidati
 import org.apache.fineract.infrastructure.core.exception.PlatformDataIntegrityException;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.apache.fineract.organisation.provisioning.constants.ProvisioningCriteriaConstants;
+import org.apache.fineract.organisation.provisioning.contract.ProvisioningEntryReadService;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCriteria;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCriteriaDefinition;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCriteriaRepository;
@@ -48,7 +48,6 @@ import org.apache.fineract.organisation.provisioning.exception.ProvisioningCateg
 import org.apache.fineract.organisation.provisioning.exception.ProvisioningCriteriaCannotBeDeletedException;
 import org.apache.fineract.organisation.provisioning.exception.ProvisioningCriteriaNotFoundException;
 import org.apache.fineract.organisation.provisioning.serialization.ProvisioningCriteriaDefinitionJsonDeserializer;
-import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.jpa.JpaSystemException;
 
@@ -61,7 +60,7 @@ public class ProvisioningCriteriaWritePlatformServiceJpaRepositoryImpl implement
     private final ProvisioningCriteriaRepository provisioningCriteriaRepository;
     private final FromJsonHelper fromApiJsonHelper;
     private final GLAccountRepository glAccountRepository;
-    private final ProvisioningEntriesReadPlatformService provisioningEntriesReadPlatformService;
+    private final ProvisioningEntryReadService provisioningEntryReadService;
 
     @Override
     public CommandProcessingResult createProvisioningCriteria(JsonCommand command) {
@@ -86,7 +85,7 @@ public class ProvisioningCriteriaWritePlatformServiceJpaRepositoryImpl implement
     @Override
     public CommandProcessingResult deleteProvisioningCriteria(Long criteriaId) {
         this.provisioningCriteriaRepository.findById(criteriaId).orElseThrow(() -> new ProvisioningCriteriaNotFoundException(criteriaId));
-        if (this.provisioningEntriesReadPlatformService.retrieveProvisioningEntryDataByCriteriaId(criteriaId) != null) {
+        if (this.provisioningEntryReadService.existsProvisioningEntryForCriteria(criteriaId)) {
             throw new ProvisioningCriteriaCannotBeDeletedException(criteriaId);
         }
         this.provisioningCriteriaRepository.deleteById(criteriaId);
@@ -103,8 +102,8 @@ public class ProvisioningCriteriaWritePlatformServiceJpaRepositoryImpl implement
             if (provisioningCriteria == null) {
                 throw new ProvisioningCategoryNotFoundException(criteriaId);
             }
-            List<LoanProduct> products = this.provisioningCriteriaAssembler.parseLoanProducts(command.parsedJson());
-            final Map<String, Object> changes = provisioningCriteria.update(command, products);
+            List<Long> loanProductIds = this.provisioningCriteriaAssembler.parseLoanProductIds(command.parsedJson());
+            final Map<String, Object> changes = provisioningCriteria.update(command, loanProductIds);
             if (!changes.isEmpty()) {
                 updateProvisioningCriteriaDefinitions(provisioningCriteria, command);
                 provisioningCriteriaRepository.saveAndFlush(provisioningCriteria);

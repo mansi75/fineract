@@ -145,6 +145,25 @@ dependencies {
 
 apply from: 'dependencies.gradle'
 
+// The Spring Modulith boundary tests import the whole org.apache.fineract class graph through ArchUnit, which needs
+// considerably more heap and metaspace than the rest of the unit tests. They run in a dedicated task so the raised
+// limits stay scoped to them instead of slowing down every other test in this module.
+ext.boundaryTestPattern = '**/*CrossFeatureBoundaryTest.class'
+
+tasks.register('boundaryTest', Test) {
+    description = 'Runs the Spring Modulith cross-feature boundary tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    include boundaryTestPattern
+    useJUnitPlatform()
+    maxHeapSize = '4g'
+    jvmArgs += ['-XX:MaxMetaspaceSize=1g']
+    // Opt in with -Dorganisation.boundary.report=true to also log the full dependency report while investigating.
+    systemProperty 'organisation.boundary.report', System.getProperty('organisation.boundary.report', 'false')
+    shouldRunAfter tasks.named('test')
+}
+
 // Configuration for the modernizer plugin
 // https://github.com/andygoossens/gradle-modernizer-plugin
 modernizer {
@@ -406,6 +425,9 @@ jar {
 }
 jar.dependsOn resolve
 test.dependsOn resolve
+test.exclude boundaryTestPattern
+boundaryTest.dependsOn resolve
+check.dependsOn boundaryTest
 checkstyleMain.dependsOn resolve
 checkstyleTest.dependsOn resolve
 rat.dependsOn prepareInputYaml

@@ -26,10 +26,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.accounting.glaccount.domain.GLAccount;
 import org.apache.fineract.accounting.glaccount.domain.GLAccountRepository;
@@ -37,42 +34,34 @@ import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.apache.fineract.infrastructure.core.service.DateUtils;
 import org.apache.fineract.infrastructure.security.service.PlatformSecurityContext;
 import org.apache.fineract.organisation.provisioning.constants.ProvisioningCriteriaConstants;
+import org.apache.fineract.organisation.provisioning.contract.ProvisioningLoanProductReadService;
 import org.apache.fineract.organisation.provisioning.domain.LoanProductProvisionCriteria;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCategory;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCategoryRepository;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCriteria;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCriteriaDefinition;
 import org.apache.fineract.organisation.provisioning.exception.ProvisioningCriteriaOverlappingDefinitionException;
-import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
-import org.apache.fineract.portfolio.loanproduct.domain.LoanProductRepository;
 
 @RequiredArgsConstructor
 public class ProvisioningCriteriaAssembler {
 
     private final FromJsonHelper fromApiJsonHelper;
     private final ProvisioningCategoryRepository provisioningCategoryRepository;
-    private final LoanProductRepository loanProductRepository;
+    private final ProvisioningLoanProductReadService provisioningLoanProductReadService;
     private final GLAccountRepository glAccountRepository;
     private final PlatformSecurityContext platformSecurityContext;
 
-    public List<LoanProduct> parseLoanProducts(final JsonElement jsonElement) {
-        List<LoanProduct> loanProducts = new ArrayList<>();
-        if (fromApiJsonHelper.parameterExists(ProvisioningCriteriaConstants.JSON_LOANPRODUCTS_PARAM, jsonElement)) {
-            JsonArray jsonloanProducts = this.fromApiJsonHelper.extractJsonArrayNamed(ProvisioningCriteriaConstants.JSON_LOANPRODUCTS_PARAM,
-                    jsonElement);
-            List<Long> productIds = new ArrayList<>(jsonloanProducts.size());
-            for (JsonElement element : jsonloanProducts) {
-                productIds.add(this.fromApiJsonHelper.extractLongNamed("id", element.getAsJsonObject()));
-            }
-            Map<Long, LoanProduct> productMap = loanProductRepository.findAllById(productIds).stream()
-                    .collect(Collectors.toMap(LoanProduct::getId, Function.identity()));
-            for (Long productId : productIds) {
-                loanProducts.add(productMap.getOrDefault(productId, null));
-            }
-        } else {
-            loanProducts = loanProductRepository.findAll();
+    public List<Long> parseLoanProductIds(final JsonElement jsonElement) {
+        if (!fromApiJsonHelper.parameterExists(ProvisioningCriteriaConstants.JSON_LOANPRODUCTS_PARAM, jsonElement)) {
+            return provisioningLoanProductReadService.retrieveAllLoanProductIds();
         }
-        return loanProducts;
+        JsonArray jsonloanProducts = this.fromApiJsonHelper.extractJsonArrayNamed(ProvisioningCriteriaConstants.JSON_LOANPRODUCTS_PARAM,
+                jsonElement);
+        List<Long> loanProductIds = new ArrayList<>(jsonloanProducts.size());
+        for (JsonElement element : jsonloanProducts) {
+            loanProductIds.add(this.fromApiJsonHelper.extractLongNamed("id", element.getAsJsonObject()));
+        }
+        return loanProductIds;
     }
 
     private void validateRange(Set<ProvisioningCriteriaDefinition> criteriaDefinitions) {
@@ -91,7 +80,7 @@ public class ProvisioningCriteriaAssembler {
     public ProvisioningCriteria fromParsedJson(final JsonElement jsonElement) {
         ProvisioningCriteria provisioningCriteria = createCriteria(jsonElement);
         final Locale locale = this.fromApiJsonHelper.extractLocaleParameter(jsonElement.getAsJsonObject());
-        List<LoanProduct> loanProducts = parseLoanProducts(jsonElement);
+        List<Long> loanProductIds = parseLoanProductIds(jsonElement);
 
         Set<ProvisioningCriteriaDefinition> criteriaDefinitions = new HashSet<>();
         JsonArray jsonProvisioningCriteria = this.fromApiJsonHelper
@@ -104,8 +93,8 @@ public class ProvisioningCriteriaAssembler {
         }
         validateRange(criteriaDefinitions);
         Set<LoanProductProvisionCriteria> mapping = new HashSet<>();
-        for (LoanProduct loanProduct : loanProducts) {
-            mapping.add(new LoanProductProvisionCriteria(provisioningCriteria, loanProduct));
+        for (Long loanProductId : loanProductIds) {
+            mapping.add(new LoanProductProvisionCriteria(provisioningCriteria, loanProductId));
         }
         provisioningCriteria.setProvisioningCriteriaDefinitions(criteriaDefinitions);
         provisioningCriteria.setLoanProductProvisioningCriteria(mapping);

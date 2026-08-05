@@ -20,8 +20,8 @@ package org.apache.fineract.organisation.provisioning.api;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Collection;
+import org.apache.fineract.organisation.provisioning.contract.ProvisioningLoanProductData;
 import org.apache.fineract.organisation.provisioning.data.ProvisioningCriteriaDefinitionData;
-import org.apache.fineract.portfolio.loanproduct.data.LoanProductData;
 
 /**
  * Created by sanyam on 18/8/17.
@@ -41,7 +41,7 @@ final class ProvisioningCriteriaApiResourceSwagger {
 
         @Schema(example = "High Risk Products Criteria")
         public String criteriaName;
-        public Collection<LoanProductData> loanProducts;
+        public Collection<ProvisioningLoanProductData> loanProducts;
         public Collection<ProvisioningCriteriaDefinitionData> provisioningcriteria;
     }
 
@@ -84,7 +84,7 @@ final class ProvisioningCriteriaApiResourceSwagger {
         public String criteriaName;
         @Schema(example = "mifos")
         public String createdBy;
-        public Collection<LoanProductData> loanProducts;
+        public Collection<ProvisioningLoanProductData> loanProducts;
         public Collection<ProvisioningCriteriaDefinitionData> provisioningcriteria;
     }
 
@@ -97,7 +97,7 @@ final class ProvisioningCriteriaApiResourceSwagger {
 
         @Schema(example = "High Risk Products Criteria")
         public String criteriaName;
-        public Collection<LoanProductData> loanProducts;
+        public Collection<ProvisioningLoanProductData> loanProducts;
         public Collection<ProvisioningCriteriaDefinitionData> provisioningcriteria;
     }
 

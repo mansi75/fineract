@@ -23,16 +23,18 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.accounting.glaccount.data.GLAccountData;
-import org.apache.fineract.accounting.glaccount.service.GLAccountReadPlatformService;
+import org.apache.fineract.organisation.provisioning.contract.ProvisioningGLAccountReadService;
+import org.apache.fineract.organisation.provisioning.contract.ProvisioningLoanProductData;
+import org.apache.fineract.organisation.provisioning.contract.ProvisioningLoanProductReadService;
 import org.apache.fineract.organisation.provisioning.data.ProvisioningCategoryData;
 import org.apache.fineract.organisation.provisioning.data.ProvisioningCriteriaData;
 import org.apache.fineract.organisation.provisioning.data.ProvisioningCriteriaDefinitionData;
 import org.apache.fineract.organisation.provisioning.exception.ProvisioningCriteriaNotFoundException;
-import org.apache.fineract.portfolio.loanproduct.data.LoanProductData;
-import org.apache.fineract.portfolio.loanproduct.service.LoanProductReadPlatformService;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -42,29 +44,28 @@ public class ProvisioningCriteriaReadPlatformServiceImpl implements Provisioning
 
     private final JdbcTemplate jdbcTemplate;
     private final ProvisioningCategoryReadPlatformService provisioningCategoryReadPlatformService;
-    private final LoanProductReadPlatformService loanProductReadPlatformService;
-    private final GLAccountReadPlatformService glAccountReadPlatformService;
-    private final LoanProductReadPlatformService loanProductReaPlatformService;
+    private final ProvisioningLoanProductReadService provisioningLoanProductReadService;
+    private final ProvisioningGLAccountReadService provisioningGLAccountReadService;
 
     @Override
     public ProvisioningCriteriaData retrievePrivisiongCriteriaTemplate() {
-        boolean onlyActive = true;
         final Collection<ProvisioningCategoryData> categories = this.provisioningCategoryReadPlatformService
                 .retrieveAllProvisionCategories();
-        final Collection<LoanProductData> allLoanProducts = this.loanProductReadPlatformService
-                .retrieveAllLoanProductsForLookup(onlyActive);
-        final Collection<GLAccountData> glAccounts = this.glAccountReadPlatformService.retrieveAllEnabledDetailGLAccounts();
+        final Collection<ProvisioningLoanProductData> allLoanProducts = this.provisioningLoanProductReadService
+                .retrieveActiveLoanProductsForLookup();
+        final Collection<GLAccountData> glAccounts = this.provisioningGLAccountReadService
+                .retrieveAllEnabledDetailGLAccountsForProvisioning();
         return ProvisioningCriteriaData.toTemplate(constructCriteriaTemplate(categories), allLoanProducts, glAccounts);
     }
 
     @Override
     public ProvisioningCriteriaData retrievePrivisiongCriteriaTemplate(ProvisioningCriteriaData data) {
-        boolean onlyActive = true;
         final Collection<ProvisioningCategoryData> categories = this.provisioningCategoryReadPlatformService
                 .retrieveAllProvisionCategories();
-        final Collection<LoanProductData> allLoanProducts = this.loanProductReadPlatformService
-                .retrieveAllLoanProductsForLookup(onlyActive);
-        final Collection<GLAccountData> glAccounts = this.glAccountReadPlatformService.retrieveAllEnabledDetailGLAccounts();
+        final Collection<ProvisioningLoanProductData> allLoanProducts = this.provisioningLoanProductReadService
+                .retrieveActiveLoanProductsForLookup();
+        final Collection<GLAccountData> glAccounts = this.provisioningGLAccountReadService
+                .retrieveAllEnabledDetailGLAccountsForProvisioning();
         return ProvisioningCriteriaData.toTemplate(data, constructCriteriaTemplate(categories), allLoanProducts, glAccounts);
     }
 
@@ -102,15 +103,19 @@ public class ProvisioningCriteriaReadPlatformServiceImpl implements Provisioning
     public ProvisioningCriteriaData retrieveProvisioningCriteria(Long criteriaId) {
         try {
             String criteriaName = retrieveCriteriaName(criteriaId);
-            Collection<LoanProductData> loanProducts = loanProductReaPlatformService.retrieveAllLoanProductsForLookup(
-                    "select product_id from m_loanproduct_provisioning_mapping where m_loanproduct_provisioning_mapping.criteria_id="
-                            + criteriaId);
+            Collection<ProvisioningLoanProductData> loanProducts = provisioningLoanProductReadService
+                    .retrieveLoanProductsByIds(retrieveMappedLoanProductIds(criteriaId));
             List<ProvisioningCriteriaDefinitionData> definitions = retrieveProvisioningDefinitions(criteriaId);
             return ProvisioningCriteriaData.toLookup(criteriaId, criteriaName, loanProducts, definitions);
         } catch (EmptyResultDataAccessException e) {
             throw new ProvisioningCriteriaNotFoundException(criteriaId, e);
         }
 
+    }
+
+    private Set<Long> retrieveMappedLoanProductIds(Long criteriaId) {
+        final String sql = "select lppm.product_id from m_loanproduct_provisioning_mapping lppm where lppm.criteria_id = ?";
+        return new LinkedHashSet<>(this.jdbcTemplate.queryForList(sql, Long.class, criteriaId)); // NOSONAR
     }
 
     private List<ProvisioningCriteriaDefinitionData> retrieveProvisioningDefinitions(Long criteriaId) {

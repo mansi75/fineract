@@ -33,10 +33,10 @@ import java.util.Map;
 import java.util.Optional;
 import org.apache.fineract.accounting.glaccount.domain.GLAccount;
 import org.apache.fineract.accounting.glaccount.domain.GLAccountRepository;
-import org.apache.fineract.accounting.provisioning.service.ProvisioningEntriesReadPlatformService;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.exception.PlatformApiDataValidationException;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
+import org.apache.fineract.organisation.provisioning.contract.ProvisioningEntryReadService;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCriteria;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCriteriaDefinition;
 import org.apache.fineract.organisation.provisioning.domain.ProvisioningCriteriaRepository;
@@ -61,7 +61,7 @@ class ProvisioningCriteriaWritePlatformServiceJpaRepositoryImplTest {
     private final ProvisioningCriteriaAssembler assembler = mock(ProvisioningCriteriaAssembler.class);
     private final ProvisioningCriteriaRepository criteriaRepository = mock(ProvisioningCriteriaRepository.class);
     private final GLAccountRepository glAccountRepository = mock(GLAccountRepository.class);
-    private final ProvisioningEntriesReadPlatformService entriesReadService = mock(ProvisioningEntriesReadPlatformService.class);
+    private final ProvisioningEntryReadService entriesReadService = mock(ProvisioningEntryReadService.class);
 
     private final ProvisioningCriteriaWritePlatformServiceJpaRepositoryImpl service = new ProvisioningCriteriaWritePlatformServiceJpaRepositoryImpl(
             deserializer, assembler, criteriaRepository, new FromJsonHelper(), glAccountRepository, entriesReadService);
@@ -104,7 +104,7 @@ class ProvisioningCriteriaWritePlatformServiceJpaRepositoryImplTest {
         // The criteria exposes its definitions indexed by categoryId; the service looks up directly into this.
         when(criteria.getDefinitionsByCategoryId()).thenReturn(Map.of(7L, definition));
         when(criteriaRepository.findById(CRITERIA_ID)).thenReturn(Optional.of(criteria));
-        when(assembler.parseLoanProducts(any())).thenReturn(List.of());
+        when(assembler.parseLoanProductIds(any())).thenReturn(List.of());
         when(glAccountRepository.findById(anyLong())).thenReturn(Optional.of(mock(GLAccount.class)));
     }
 

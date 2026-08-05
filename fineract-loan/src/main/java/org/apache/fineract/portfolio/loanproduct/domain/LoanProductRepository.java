@@ -49,4 +49,7 @@ public interface LoanProductRepository extends JpaRepository<LoanProduct, Long>,
 
     @Query("select loanProduct from LoanProduct loanProduct where lower(loanProduct.name) in :productNames")
     List<LoanProduct> findAllByNameIgnoreCase(@Param("productNames") Collection<String> productNames);
+
+    @Query("select loanProduct.id from LoanProduct loanProduct")
+    List<Long> findAllLoanProductIds();
 }

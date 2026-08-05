@@ -26,7 +26,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.apache.fineract.accounting.common.AccountingEnumerations;
 import org.apache.fineract.infrastructure.core.api.ApiFacingEnum;
@@ -746,6 +748,20 @@ public class LoanProductReadPlatformServiceImpl implements LoanProductReadPlatfo
         }
 
         return this.jdbcTemplate.query(sql, rm, currencyCode); // NOSONAR
+    }
+
+    @Override
+    public List<LoanProductData> retrieveLoanProductsForLookup(final Set<Long> loanProductIds) {
+        if (loanProductIds.isEmpty()) {
+            return List.of();
+        }
+        this.context.authenticatedUser();
+
+        final LoanProductLookupMapper rm = new LoanProductLookupMapper(sqlGenerator);
+        final String placeholders = loanProductIds.stream().map(id -> "?").collect(Collectors.joining(", "));
+        final String sql = "select " + rm.schema() + " where lp.id in (" + placeholders + ")";
+
+        return this.jdbcTemplate.query(sql, rm, loanProductIds.toArray()); // NOSONAR
     }
 
     @Override

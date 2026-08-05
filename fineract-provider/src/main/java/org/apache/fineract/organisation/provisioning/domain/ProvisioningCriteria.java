@@ -36,7 +36,6 @@ import java.util.stream.Collectors;
 import org.apache.fineract.infrastructure.core.api.JsonCommand;
 import org.apache.fineract.infrastructure.core.domain.AbstractAuditableCustom;
 import org.apache.fineract.organisation.provisioning.constants.ProvisioningCriteriaConstants;
-import org.apache.fineract.portfolio.loanproduct.domain.LoanProduct;
 import org.apache.fineract.useradministration.domain.AppUser;
 
 @Entity
@@ -84,7 +83,7 @@ public class ProvisioningCriteria extends AbstractAuditableCustom {
         this.loanProductMapping.addAll(loanProductMapping);
     }
 
-    public Map<String, Object> update(JsonCommand command, List<LoanProduct> loanProducts) {
+    public Map<String, Object> update(JsonCommand command, List<Long> loanProductIds) {
         final Map<String, Object> actualChanges = new LinkedHashMap<>(7);
         if (command.isChangeInStringParameterNamed(ProvisioningCriteriaConstants.JSON_CRITERIANAME_PARAM, criteriaName)) {
             final String valueAsInput = command.stringValueOfParameterNamed(ProvisioningCriteriaConstants.JSON_CRITERIANAME_PARAM);
@@ -93,20 +92,20 @@ public class ProvisioningCriteria extends AbstractAuditableCustom {
         }
 
         Set<LoanProductProvisionCriteria> temp = new HashSet<>();
-        Set<LoanProduct> productsTemp = new HashSet<>();
+        Set<Long> productsTemp = new HashSet<>();
 
         for (LoanProductProvisionCriteria mapping : loanProductMapping) {
-            if (!loanProducts.contains(mapping.getLoanProduct())) {
+            if (!loanProductIds.contains(mapping.getLoanProductId())) {
                 temp.add(mapping);
             } else {
-                productsTemp.add(mapping.getLoanProduct());
+                productsTemp.add(mapping.getLoanProductId());
             }
         }
         loanProductMapping.removeAll(temp);
 
-        for (LoanProduct loanProduct : loanProducts) {
-            if (!productsTemp.contains(loanProduct)) {
-                this.loanProductMapping.add(new LoanProductProvisionCriteria(this, loanProduct));
+        for (Long loanProductId : loanProductIds) {
+            if (!productsTemp.contains(loanProductId)) {
+                this.loanProductMapping.add(new LoanProductProvisionCriteria(this, loanProductId));
             }
         }
 
