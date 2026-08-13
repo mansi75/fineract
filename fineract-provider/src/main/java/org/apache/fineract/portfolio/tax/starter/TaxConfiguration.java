@@ -18,7 +18,6 @@
  */
 package org.apache.fineract.portfolio.tax.starter;
 
-import org.apache.fineract.accounting.common.AccountingDropdownReadPlatformService;
 import org.apache.fineract.accounting.glaccount.domain.GLAccountRepositoryWrapper;
 import org.apache.fineract.infrastructure.core.serialization.FromJsonHelper;
 import org.apache.fineract.portfolio.tax.domain.TaxComponentRepository;
@@ -29,6 +28,7 @@ import org.apache.fineract.portfolio.tax.mapper.TaxComponentMapper;
 import org.apache.fineract.portfolio.tax.mapper.TaxGroupMapper;
 import org.apache.fineract.portfolio.tax.serialization.TaxValidator;
 import org.apache.fineract.portfolio.tax.service.TaxAssembler;
+import org.apache.fineract.portfolio.tax.service.TaxGLAccountReadService;
 import org.apache.fineract.portfolio.tax.service.TaxReadPlatformService;
 import org.apache.fineract.portfolio.tax.service.TaxReadPlatformServiceImpl;
 import org.apache.fineract.portfolio.tax.service.TaxWritePlatformService;
@@ -52,8 +52,8 @@ public class TaxConfiguration {
     public TaxReadPlatformService taxReadPlatformService(final TaxComponentRepository taxComponentRepository,
             final TaxComponentRepositoryWrapper taxComponentRepositoryWrapper, final TaxComponentMapper taxComponentMapper,
             final TaxGroupRepository taxGroupRepository, final TaxGroupRepositoryWrapper taxGroupRepositoryWrapper,
-            final TaxGroupMapper taxGroupMapper, AccountingDropdownReadPlatformService accountingDropdownReadPlatformService) {
-        return new TaxReadPlatformServiceImpl(accountingDropdownReadPlatformService, taxComponentRepository, taxComponentRepositoryWrapper,
+            final TaxGroupMapper taxGroupMapper, TaxGLAccountReadService taxGLAccountReadService) {
+        return new TaxReadPlatformServiceImpl(taxGLAccountReadService, taxComponentRepository, taxComponentRepositoryWrapper,
                 taxComponentMapper, taxGroupRepository, taxGroupRepositoryWrapper, taxGroupMapper);
     }
 

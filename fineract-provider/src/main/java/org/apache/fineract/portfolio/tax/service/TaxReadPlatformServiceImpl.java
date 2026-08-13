@@ -21,7 +21,6 @@ package org.apache.fineract.portfolio.tax.service;
 import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.apache.fineract.accounting.common.AccountingDropdownReadPlatformService;
 import org.apache.fineract.portfolio.tax.data.TaxComponentData;
 import org.apache.fineract.portfolio.tax.data.TaxGroupData;
 import org.apache.fineract.portfolio.tax.domain.TaxComponentRepository;
@@ -34,7 +33,7 @@ import org.apache.fineract.portfolio.tax.mapper.TaxGroupMapper;
 @RequiredArgsConstructor
 public class TaxReadPlatformServiceImpl implements TaxReadPlatformService {
 
-    private final AccountingDropdownReadPlatformService accountingDropdownReadPlatformService;
+    private final TaxGLAccountReadService taxGLAccountReadService;
     private final TaxComponentRepository taxComponentRepository;
     private final TaxComponentRepositoryWrapper taxComponentRepositoryWrapper;
     private final TaxComponentMapper taxComponentMapper;
@@ -54,8 +53,8 @@ public class TaxReadPlatformServiceImpl implements TaxReadPlatformService {
 
     @Override
     public TaxComponentData retrieveTaxComponentTemplate() {
-        return TaxComponentData.template(this.accountingDropdownReadPlatformService.retrieveAccountMappingOptions(),
-                this.accountingDropdownReadPlatformService.retrieveGLAccountTypeOptions());
+        return TaxComponentData.template(this.taxGLAccountReadService.retrieveGLAccountOptions(),
+                this.taxGLAccountReadService.retrieveGLAccountTypeOptions());
     }
 
     @Override

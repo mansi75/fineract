@@ -145,6 +145,30 @@ dependencies {
 
 apply from: 'dependencies.gradle'
 
+// The boundary tests import the whole class graph, so they get their own task with a bigger heap instead of raising
+// the limits for every test in this module.
+tasks.register('crossFeatureBoundaryTest', Test) {
+    group = 'verification'
+    description = 'Verifies that feature modules depend only on fineract-core and fineract-command.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching '*CrossFeatureBoundaryTest'
+    }
+    maxHeapSize = '2g'
+    jvmArgs += ['-XX:MaxMetaspaceSize=1g']
+    systemProperty 'tax.boundary.report', System.getProperty('tax.boundary.report', 'false')
+}
+
+test {
+    filter {
+        excludeTestsMatching '*CrossFeatureBoundaryTest'
+    }
+}
+
+check.dependsOn 'crossFeatureBoundaryTest'
+
 // Configuration for the modernizer plugin
 // https://github.com/andygoossens/gradle-modernizer-plugin
 modernizer {
